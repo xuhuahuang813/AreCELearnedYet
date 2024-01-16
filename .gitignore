@@ -18,3 +18,5 @@ lecarb.egg-info
 *.tar
 poetry.lock
 quicksel/
+
+data.zip
