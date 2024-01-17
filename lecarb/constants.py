@@ -2,6 +2,10 @@ import os
 from pathlib import Path
 import torch
 
+# 使用dotenv库，加载.env文件。
+from dotenv import load_dotenv
+load_dotenv()
+
 DATA_ROOT = Path(os.environ["DATA_ROOT"])
 OUTPUT_ROOT = Path(os.environ["OUTPUT_ROOT"])
 MODEL_ROOT = OUTPUT_ROOT / "model"
