@@ -20,3 +20,5 @@ poetry.lock
 quicksel/
 
 data.zip
+hxh_image/*
+hxh_result/*
