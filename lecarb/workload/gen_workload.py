@@ -22,7 +22,7 @@ def get_focused_table(table, ref_table, win_ratio):
 def generate_workload(
     seed: int, dataset: str, version: str,
     name: str, no_label: bool, old_version: str, win_ratio: str,
-    params: Dict[str, Dict[str, Any]]
+    params: Dict[str, Dict[str, Any]], is_lstm:str
 ) -> None:
 
     random.seed(seed)
@@ -59,15 +59,30 @@ def generate_workload(
             width_params=params.get('width_params') or {})
 
     queryset = {}
-    for group, num in params['number'].items():
-        L.info(f"Start generate workload with {num} queries for {group}...")
-        queries = []
-        for i in range(num):
-            queries.append(qgen.generate())
-            if (i+1) % 1000 == 0:
-                L.info(f"{i+1} queries generated")
-        queryset[group] = queries
-
+    
+    # hxh 生成供lstm使用的训练集需要进入is_lstm分支
+    if not is_lstm:
+        for group, num in params['number'].items():
+            L.info(f"Start generate workload with {num} queries for {group}...")
+            queries = []
+            for i in range(num):
+                queries.append(qgen.generate())
+                if (i+1) % 1000 == 0:
+                    L.info(f"{i+1} queries generated")
+            queryset[group] = queries
+    elif is_lstm:
+        L.info("Generate workloads for lstm models...")
+        # queryNumPerSeq 是句子长度，默认50
+        queryNumPerSeq = int(params['queryNumPerSeq'])
+        for group, num in params['number'].items():
+            L.info(f"Start generate workload with {num} queries for {group}...")
+            queries = []
+            for i in range(num):
+                queries += qgen.generate_lstm(queryNumPerSeq)
+                if (i+1) % 1000 == 0:
+                    L.info(f"{i+1} queries generated")
+            queryset[group] = queries
+        
     L.info("Dump queryset to disk...")
     dump_queryset(dataset, name, queryset)
 

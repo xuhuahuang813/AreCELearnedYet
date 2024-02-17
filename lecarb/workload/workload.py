@@ -139,6 +139,27 @@ def query_2_vector(query: Query, table: Table, upper: int=1):
             raise NotImplementedError
     return np.array(vec) * upper
 
+# hxh 只编码不为none的列
+def query_2_vector_lstm(query: Query, table: Table, upper: int=1):
+    vec = []
+    for col, pred in query.predicates.items():
+        if pred is None:
+            continue
+        op, val = pred
+        if op == '[]':
+            vec.extend([table.columns[col].normalize(val[0]).item(), table.columns[col].normalize(val[1]).item()])
+        elif op == '>=':
+            vec.extend([table.columns[col].normalize(val).item(), 1.0])
+        elif op == '<=':
+            vec.extend([0.0, table.columns[col].normalize(val).item()])
+        elif op == '=':
+            vec.extend([table.columns[col].normalize(val).item()] * 2)
+        else:
+            raise NotImplementedError
+    return np.array(vec) * upper
+    
+def his_2_card():
+    return None
 def query_2_quicksel_vector(query: Query, table: Table, discrete_cols=set()):
     vec = []
     for col_name, pred in query.predicates.items():

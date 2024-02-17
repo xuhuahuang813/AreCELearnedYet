@@ -13,3 +13,15 @@ print("data[\"train\"] type is", type(data["train"]))  # <class 'list'> 100000
 train len is 100000; valid len is 10000; test len is 10000
 
 ![Alt text](hxh_image/image_2.png)
+
+## data/census13/original.table.pkl
+['dataset',
+ 'version',
+ 'name',
+ 'data',
+ 'data_size_mb',
+ 'row_num',
+ 'col_num',
+ 'columns']
+
+ ![Alt text](hxh_image/image_3.png)

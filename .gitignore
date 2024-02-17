@@ -11,7 +11,7 @@ fmodels/
 tmp/
 tmp.*
 *.bk
-.vscode
+# .vscode
 .mypy_cache
 .venv
 lecarb.egg-info

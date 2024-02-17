@@ -5,6 +5,7 @@ from typing_extensions import Protocol
 
 import numpy as np
 import pandas as pd
+import math
 
 from ..dtypes import is_categorical
 from ..dataset.dataset import Table, Column
@@ -184,6 +185,7 @@ class QueryGenerator(object):
         self.center_params = center_params
         self.width_params = width_params
 
+    # 返回一个query
     def generate(self) -> Query:
         attr_func = np.random.choice(list(self.attr.keys()), p=list(self.attr.values()))
         #  L.info(f'start generate attr {attr_func.__name__}')
@@ -196,3 +198,30 @@ class QueryGenerator(object):
         width_func = np.random.choice(list(self.width.keys()), p=list(self.width.values()))
         #  L.info(f'start generate widths {width_func.__name__}')
         return width_func(self.table, attr_lst, center_lst, self.width_params)
+    
+    # hxh 生成lstm数据集
+    # 返回一组query。组中query个数等于单个序列长度。
+    def generate_lstm(self, queryNumPerSeq:int) -> List[Query]:
+        # groupSize=g domain (num_domain_left[g], num_domain_right[g]]
+        num_domain_left = [0, 0, 21, 10, 0, 0]
+        num_domain_right = [0, 10000, 100, 21, 10, 10]
+    
+        queries = []
+        
+        # 选择列
+        num_pred = np.random.randint(1, 4) # 单个查询中包含列的个数
+        attr_domain = [c for c in list(self.table.data.columns) if self.table.columns[c].vocab_size > num_domain_left[num_pred] and self.table.columns[c].vocab_size <= num_domain_right[num_pred]]
+        attr_lst = np.random.choice(attr_domain, size=num_pred, replace=False)
+        
+        for _ in range(queryNumPerSeq):
+            # L.info(f"Start generate queries of one seq. queryNumPerSeq is {queryNumPerSeq}")
+            
+            center_func = np.random.choice(list(self.center.keys()), p=list(self.center.values()))
+            #  L.info(f'start generate center points {center_func.__name__}')
+            center_lst = center_func(self.table, attr_lst, self.center_params)
+
+            width_func = np.random.choice(list(self.width.keys()), p=list(self.width.values()))
+            #  L.info(f'start generate widths {width_func.__name__}')
+            queries.append(width_func(self.table, attr_lst, center_lst, self.width_params))
+
+        return queries

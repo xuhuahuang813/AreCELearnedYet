@@ -24,9 +24,14 @@ class Column(object):
         self.vocab_size = len(self.vocab)
         self.minval = self.vocab[1] if self.has_nan else self.vocab[0]
         self.maxval = self.vocab[-1]
+        
+        # 字典对象
+        self.value_2_domain = {}
+        self.func_value_2_domain()
 
     def __repr__(self):
         return f'Column({self.name}, type={self.dtype}, vocab size={self.vocab_size}, min={self.minval}, max={self.maxval}, has NaN={self.has_nan})'
+        # return f'Column({self.name}, type={self.dtype}, vocab size={self.vocab_size}, min={self.minval}, max={self.maxval}, has NaN={self.has_nan}, value_2_domain={self.value_2_domain})'
 
     def __parse_vocab(self, data):
         # pd.isnull returns true for both np.nan and np.datetime64('NaT').
@@ -73,6 +78,28 @@ class Column(object):
             return np.zeros(len(data)).astype(np.float32)
         val_norm = (data - minval) / (maxval - minval)
         return val_norm.astype(np.float32)
+    
+    # hxh 统一返回float64类型的返回值
+    def normalize_lstm(self, data):
+        """Normalize data to range [0, 1]"""
+        minval = self.minval
+        maxval = self.maxval
+        # if column is not numerical, use descretized value
+        if is_categorical(self.dtype):
+            data = self.discretize(data)[0]
+            minval = 0
+            maxval = self.vocab_size - 1
+        # data = np.array(data, dtype=np.float32)
+        if minval >= maxval:
+            L.warning(f"column {self.name} has min value {minval} >= max value{maxval}")
+            return np.zeros(len(data)).astype(np.float32)
+        val_norm = (data - minval) / (maxval - minval)
+        return val_norm.astype(np.float32)
+    
+    # hxh 为该列中的每一个词计算域。因多次用到，所以存在Table的原信息中
+    def func_value_2_domain(self):
+        for vocab_ in self.vocab:
+            self.value_2_domain[vocab_] = self.normalize_lstm(vocab_)
 
 class Table(object):
     def __init__(self, dataset, version):
@@ -171,12 +198,12 @@ def dump_table(table: Table) -> None:
 def load_table(dataset: str, version: str, overwrite: bool=False) -> Table:
     table_path = DATA_ROOT / dataset / f"{version}.table.pkl"
 
-    if not overwrite and table_path.is_file():
-        L.info("table exists, load...")
-        with open(table_path, 'rb') as f:
-            table = pickle.load(f)
-        L.info(f"load finished: {table}")
-        return table
+    # if not overwrite and table_path.is_file():
+    #     L.info("table exists, load...")
+    #     with open(table_path, 'rb') as f:
+    #         table = pickle.load(f)
+    #     L.info(f"load finished: {table}")
+    #     return table
 
     table = Table(dataset, version)
     L.info("dump table to disk...")

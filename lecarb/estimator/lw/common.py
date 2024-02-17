@@ -23,8 +23,8 @@ def MinSel(sel_list):
     return sel_list.min() if len(sel_list) > 0 else 1.0
 
 def encode_query(table, query, pg_est):
-        range_features = query_2_vector(query, table, upper=1000)
-        sqls = query_2_sqls(query, table)
+        range_features = query_2_vector(query, table, upper=1000) # 获取query的[]range表示
+        sqls = query_2_sqls(query, table) # 获取query的sql表示
         sel_list = []
         for sql in sqls:
             pred, _ = pg_est.query_sql(sql)
@@ -65,13 +65,32 @@ def load_lw_dataset(table, workload, seed, bins):
         with open(file_path, 'rb') as f:
             return pickle.load(f)
 
+    # pg_est是Postgres的实例
     pg_est = Postgres(table, bins, seed)
     L.info(f"Start loading queryset:{workload} and labels for version {table.version} of dataset {table.dataset}...")
     queryset = load_queryset(table.dataset, workload)
     labels = load_labels(table.dataset, table.version, workload)
 
+    '''
+    w_dataset <dict> keys: train, valid, test
+    lw_dataset['train'] 包含3个长度为100000的array: X【[range_features, encode_label(ce_features)]】, y【log后的基数】, gt【真实基数】
+
+    X train len(tu_) 100000
+    [   0.         1000.          500.          500.            0.
+    1000.            0.         1000.          666.66668653  666.66668653
+        0.         1000.          200.00000298  200.00000298    0.
+    1000.         1000.         1000.            0.           93.03035587
+        0.         1000.            0.         1000.          951.21949911
+    951.21949911    9.17242751   12.14625045   13.61930296]
+    
+    y train len(tu_) 100000
+    11.38586240064146
+    
+    gt train len(tu_) 100000
+    2675
+    '''
     lw_dataset = {}
-    for group in queryset.keys():
+    for group in queryset.keys(): # group: train, valid, test
         L.info(f"Start encode group: {group} with {len(labels[group])} queries...")
         lw_dataset[group] = encode_queries(table, queryset[group], labels[group], pg_est)
 

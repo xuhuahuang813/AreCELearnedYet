@@ -231,6 +231,16 @@ wkld-gen-base data version name='base':
         'width': {'uniform': 0.5, 'exponential': 0.5}, \
         'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
 
+# hxh
+# just wkld-gen-lstm census13 original lstm-small
+wkld-gen-lstm data version name='lstm':
+    poetry run python -m lecarb workload gen -d{{data}} -v{{version}} -w{{name}} --params \
+        "{'attr': {'pred_number': 1.0}, \
+        'center': {'distribution': 1.0}, \
+        'width': {'uniform': 1.0}, \
+        'number': {'train': 1000, 'valid': 100, 'test': 100}, \
+        'queryNumPerSeq': 50}" --is-lstm
+
 wkld-gen-base-sth10 data version seed name:
     poetry run python -m lecarb workload gen -s{{seed}} -d{{data}} -v{{version}} -w{{name}} --params \
         "{'attr': {'pred_number': 1.0}, \
@@ -274,6 +284,12 @@ train-lw-nn dataset='census13' version='original' workload='base' hid_units='128
 train-lw-nn-update dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123' eq='100':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
         "{'epochs': {{eq}}, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
+
+# hxh 
+# TODO
+train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123':
+    poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
+        "{'epochs': 500, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 train-lw-tree dataset='census13' version='original' workload='base' trees='16' bins='200' train_num='10000' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_tree --params \

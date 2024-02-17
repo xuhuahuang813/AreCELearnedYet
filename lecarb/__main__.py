@@ -1,7 +1,7 @@
 """Le Carb - LEarned CARdinality estimator Benchmark
 
 Usage:
-  lecarb workload gen [-s <seed>] [-d <dataset>] [-v <version>] [-w <workload>] [--params <params>] [--no-label] [-o <old_version>] [-r <ratio>]
+  lecarb workload gen [-s <seed>] [-d <dataset>] [-v <version>] [-w <workload>] [--params <params>] [--no-label] [-o <old_version>] [-r <ratio>] [--is-lstm]
   lecarb workload label [-d <dataset>] [-v <version>] [-w <workload>]
   lecarb workload update-label [-s <seed>] [-d <dataset>] [-v <version>] [-w <workload>] [--sample-ratio <sample_size>]
   lecarb workload merge [-d <dataset>] [-v <version>] [-w <workload>]
@@ -54,6 +54,7 @@ from .estimator.utils import report_errors, report_dynamic_errors
 from .estimator.naru.naru import train_naru, test_naru, update_naru
 from .estimator.mscn.mscn import train_mscn, test_mscn
 from .estimator.lw.lw_nn import train_lw_nn, test_lw_nn
+from .estimator.lstm.lstm import train_lstm
 from .estimator.lw.lw_tree import train_lw_tree, test_lw_tree
 from .estimator.deepdb.deepdb import train_deepdb, test_deepdb, update_deepdb
 from .workload.workload import dump_sqls
@@ -69,6 +70,7 @@ if __name__ == "__main__":
 
     if args["workload"]:
         if args["gen"]:
+            # hxh 增加is_lstm=args["--is-lstm"]参数
             generate_workload(
                 seed,
                 dataset=args["--dataset"],
@@ -77,7 +79,8 @@ if __name__ == "__main__":
                 no_label = args["--no-label"],
                 old_version=args["--old-version"],
                 win_ratio=args["--win-ratio"],
-                params = literal_eval(args["--params"])
+                params = literal_eval(args["--params"]),
+                is_lstm=args["--is-lstm"]
             )
         elif args["label"]:
             generate_labels(
@@ -161,6 +164,9 @@ if __name__ == "__main__":
             train_deepdb(seed, dataset, version ,workload, params, sizelimit)
         elif args["--estimator"] == "lw_nn":
             train_lw_nn(seed, dataset, version ,workload, params, sizelimit)
+        # hxh lstm模型训练入口
+        elif args["--estimator"] == "lstm":
+            train_lstm(seed, dataset, version ,workload, params, sizelimit)
         elif args["--estimator"] == "lw_tree":
             train_lw_tree(seed, dataset, version ,workload, params, sizelimit)
         else:

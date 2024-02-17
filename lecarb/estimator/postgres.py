@@ -25,12 +25,14 @@ class Postgres(Estimator):
         for c in table.columns.values():
             self.cursor.execute('alter table \"{}\" alter column {} set statistics {};'.format(
                 table.name, c.name, stat_target))
+        # 执行analyze命令是触发统计信息的收集，不会有返回结果。
         self.cursor.execute('analyze \"{}\";'.format(self.table.name))
         self.conn.commit()
         dur_min = (time.time() - start_stmp) / 60
 
-        # get size
+        # get size 表的统计信息在数据库中占用的存储空间。单位是byte。
         self.cursor.execute('select sum(pg_column_size(pg_stats)) from pg_stats where tablename=\'{}\''.format(self.table.name))
+        # self.cursor.fetchall() [(8912,)]
         size = self.cursor.fetchall()[0][0]
         #  self.cursor.execute('select sum(pg_column_size(pg_stats_ext)) from pg_stats_ext where tablename=\'{}\''.format(self.table.name))
         #  res = self.cursor.fetchall()[0][0]
@@ -54,14 +56,16 @@ class Postgres(Estimator):
         return card, dur_ms
 
     def query_sql(self, sql):
+        # sql = 'explain(analyze, format json) {}'.format(sql)
         sql = 'explain(format json) {}'.format(sql)
-        #  L.info('sql: {}'.format(sql))
+        # L.info('sql: {}'.format(sql))
 
         start_stmp = time.time()
         self.cursor.execute(sql)
         res = self.cursor.fetchall()
+        # L.info(res)
         card = res[0][0][0]['Plan']['Plan Rows']
-        #  L.info(card)
+        # L.info(card)
         dur_ms = (time.time() - start_stmp) * 1e3
         return card, dur_ms
 
