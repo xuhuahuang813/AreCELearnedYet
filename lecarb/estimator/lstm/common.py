@@ -208,8 +208,8 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
     if file_path.is_file():
         L.info(f"features already built in file {file_path}")
         # TODO 记得删除注释
-        # with open(file_path, 'rb') as f:
-        #     return pickle.load(f)
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
     
     L.info(f"Start loading queryset:{workload} and labels for version {table.version} of dataset {table.dataset}...")
     
