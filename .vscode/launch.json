@@ -45,7 +45,7 @@
                     "-v", "original",
                     "-w", "lstm-small",
                     "-e", "lstm",
-                    "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 100000, \"bs\": 32}",
+                    "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64', \"train_num\": 1000, \"bs\": 32}",
                     "--sizelimit", "0"
             ],
             // "args": [
