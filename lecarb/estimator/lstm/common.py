@@ -208,10 +208,10 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
 
     # query的pkl存储路径。如果生成过则直接加载。e.g.data/census13/lw/original_base_200_123.pkl。
     file_path = query_path / f"{table.version}_{workload}_{bins}_{seed}.pkl"
-    # if file_path.is_file():
-    #     L.info(f"features already built in file {file_path}")
-    #     with open(file_path, 'rb') as f:
-    #         return pickle.load(f)
+    if file_path.is_file():
+        L.info(f"features already built in file {file_path}")
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
     
     L.info(f"Start loading queryset:{workload} and labels for version {table.version} of dataset {table.dataset}...")
     

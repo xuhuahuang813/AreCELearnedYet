@@ -134,7 +134,9 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     model_path.mkdir(parents=True, exist_ok=True)
     model_file = model_path / f"{table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
         
-    criterion = nn.BCEWithLogitsLoss()
+    # BCEWithLogitsLoss损失函数，不能使preds趋近于[0, 1]区间中，训练过程趋向[-5, 9]
+    # criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     best_valid_loss = float('inf')
@@ -165,7 +167,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         model.eval()
         val_losses = []
         for _, data in enumerate(valid_loader):
-            inputs, labels, truecards = data
+            inputs, labels, truecards, collist = data
             inputs = inputs.to(DEVICE).float()
             labels = labels.to(DEVICE).float()
             
