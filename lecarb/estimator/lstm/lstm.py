@@ -17,16 +17,16 @@ from ...constants import DEVICE, MODEL_ROOT, NUM_THREADS
 
 L = logging.getLogger(__name__)
 
-input_dim = 11
-hidden_dim = 64
-output_dim = 10000
+# input_dim = 11
+# hidden_dim = 64
+# output_dim = 10000
 
 class Args:
     def __init__(self, **kwargs):
         self.bs = 32
         self.epochs = 500
-        self.lr = 0.001 # default value in both pytorch and keras
-        self.hid_units = '64'
+        self.lr = 0.01 # default value in both pytorch and keras
+        self.hid_units = '256_256_512_1024_4096'
         self.bins = 200
         self.train_num = 1000 # 默认验证和测试是训练的1/10
 
@@ -34,43 +34,60 @@ class Args:
         self.__dict__.update(kwargs)
 
 class TextDataset(Dataset):
-    def __init__(self, texts, labels, truecards):
+    def __init__(self, texts, labels, truecards, colList):
         self.texts = texts
         self.labels = labels
         self.truecards = truecards
+        self.colList = colList
 
     def __len__(self):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        return self.texts[idx], self.labels[idx], self.truecards[idx]
+        return self.texts[idx], self.labels[idx], self.truecards[idx], self.colList[idx]
 
 class TextSentimentModel(nn.Module):
-    def __init__(self):
+    def __init__(self, hid_units, input_dim=11, output_dim=10000):
         super(TextSentimentModel, self).__init__()
-        self.rnn = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, output_dim)
-
+        self.hid_units_list = [int(u) for u in hid_units.split('_')] # hid_units = '64_128_256' 其中64是lstm的隐藏层，其他是线性层。
+        
+        self.rnn = nn.LSTM(input_size=input_dim, hidden_size=self.hid_units_list[0], batch_first=True)
+        
+        # 中间线性层
+        linear_layers = []
+        in_hid_size = self.hid_units_list[0]
+        for out_hid_size in self.hid_units_list[1: ]:
+            linear_layers.append(nn.Linear(in_hid_size, out_hid_size))
+            linear_layers.append(nn.ReLU(inplace=True))
+            in_hid_size = out_hid_size
+        self.linear_layers = nn.Sequential(*linear_layers)
+        
+        # 最终线性层
+        self.final_linear = nn.Linear(self.hid_units_list[-1], output_dim)
+        
     def forward(self, text):
         # L.info(text.shape)
         output, _ = self.rnn(text)
         last_hidden_state = output[:, -1, :]
-        sentiment_logits = self.fc(last_hidden_state)
+        
+        x = self.linear_layers(last_hidden_state)
+        sentiment_logits = self.final_linear(x)
         return sentiment_logits
     def name(self):
-        return f"lstm_{hidden_dim}"
+        hid_unit_str = "_".join(map(str, self.hid_units_list))
+        return f"lstm_{hid_unit_str}"
     
 def make_dataset(dataset, num=-1):
-    X, y, gt = dataset
+    X, y, gt, colList = dataset
     # 将list转为tenser
     X = torch.tensor(X).view(num, 50, 11)
     y = torch.tensor(y)
     gt = torch.tensor(gt).view(num, 50)
     L.info(f"{X.shape}, {y.shape}, {gt.shape}")
     if num <= 0:
-        return TextDataset(X, y, gt)
+        return TextDataset(X, y, gt, colList)
     else:
-        return TextDataset(X[:num], y[:num], gt[:num])
+        return TextDataset(X[:num], y[:num], gt[:num], colList[:num])
     
 def train_lstm(seed, dataset, version, workload, params, sizelimit):
     L.info(f"training LSTM model with seed {seed}")
@@ -100,7 +117,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     train_loader = DataLoader(train_dataset, batch_size=args.bs)
     valid_loader = DataLoader(valid_dataset, batch_size=args.bs)
     
-    model = TextSentimentModel().to(DEVICE)
+    model = TextSentimentModel(args.hid_units).to(DEVICE)
     
     state = {
         'seed': seed,
@@ -128,7 +145,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         train_losses = []
         model.train()
         for _, data in enumerate(train_loader):
-            inputs, labels, truecards = data
+            inputs, labels, truecards, collist = data
             inputs = inputs.to(DEVICE).float()
             labels = labels.to(DEVICE).float()
             
