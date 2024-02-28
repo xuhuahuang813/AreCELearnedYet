@@ -91,9 +91,9 @@ def make_dataset(dataset, num=-1):
     else:
         return TextDataset(X[:num], y[:num], gt[:num], colList[:num])
 
-# 解码模型输出
+# TODO 解码模型输出
 def decodePreds(inputs, preds, truecards, collist):
-    # L.info("here")
+    L.info("here")
     return None
     
 
@@ -115,7 +115,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # 加载数据集，将csv文件转为Table类
     table = load_table(dataset, version)
     
-    dataset = load_lstm_dataset(table, workload, seed, params['bins'])
+    # 加载训练、验证数据集，加载cols_alldomain用于解码
+    dataset, cols_alldomain = load_lstm_dataset(table, workload, seed, params['bins'])
     
     # 加载训练集和验证集
     train_dataset = make_dataset(dataset['train'], int(args.train_num))

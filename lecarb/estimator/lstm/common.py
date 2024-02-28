@@ -22,8 +22,10 @@ from ...dtypes import is_categorical
 
 L = logging.getLogger(__name__)
 
-# 字典，存储column字符串和对应的1w维向量
+# 字典，存储column字符串和对应的1w维向量。其中，列名间用"/"连接。
 clos_vector = {}
+# 字典，存储column字符串和对应的联合域值。字典会dump，用于Lstm模型得到preds的10000维向量后解码。其中，列名间用"/"连接。
+clos_alldomain = {}
 
 # AVI
 def AVI(sel_list):
@@ -109,7 +111,7 @@ def encode_query_y(query:Query, table: Table):
     for col_, pre_ in query.predicates.items():
         if pre_ is not None:
             col_list.append(col_)
-    col_list_str = "_".join(col_list)
+    col_list_str = "/".join(col_list)
     
     # 如果已经生成过，则直接返回col_list_str中对应的1w维
     if col_list_str in clos_vector:
@@ -148,6 +150,8 @@ def encode_query_y(query:Query, table: Table):
         result_df.reset_index(drop=True, inplace=True)
         # 合并原始的grouped_counts中的count和cumulative_probability列，只保留存在的行
         grouped_counts = pd.merge(result_df, grouped_counts, how='inner', on=col_list)
+        # 保存到clos_alldomain
+        clos_alldomain[col_list_str] = grouped_counts[col_list + ['index_alldomain']]
         
         unionDomain = np.zeros(10000) # 1w维向量
         # 给unionDomain数组赋值
@@ -203,15 +207,15 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
     query_path = DATA_ROOT / table.dataset / "lstm"
     query_path.mkdir(exist_ok=True)
     
-    # # 存储列间corr的路径
-    # corr_path = query_path / f"{table.version}_{workload}_{bins}_{seed}_corr.csv"
-
     # query的pkl存储路径。如果生成过则直接加载。e.g.data/census13/lw/original_base_200_123.pkl。
     file_path = query_path / f"{table.version}_{workload}_{bins}_{seed}.pkl"
-    if file_path.is_file():
-        L.info(f"features already built in file {file_path}")
-        with open(file_path, 'rb') as f:
-            return pickle.load(f)
+    # cols_alldomain的pkl存储路径。data/census13/lstm/original_lstm-small_200_123_colsAllDomain.pkl
+    colsAllDomain_path = query_path / f"{table.version}_{workload}_{bins}_{seed}_colsAllDomain.pkl"
+    
+    if file_path.is_file() and colsAllDomain_path.is_file():
+        L.info(f"features already built in file {file_path}, domain of all columns already build in file {colsAllDomain_path}")
+        with open(file_path, 'rb') as f1, open(colsAllDomain_path, 'rb') as f2:
+            return pickle.load(f1), pickle.load(f2)
     
     L.info(f"Start loading queryset:{workload} and labels for version {table.version} of dataset {table.dataset}...")
     
@@ -229,7 +233,12 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
         L.info(f"Start encode group: {group} with {len(labels[group])} queries...")
         lw_dataset[group] = encode_queries(table, queryset[group], labels[group])
         
+    # 保存query的pkl
     with open(file_path, 'wb') as f:
         pickle.dump(lw_dataset, f, protocol=PKL_PROTO)
+    # 保存cols_alldomain的pkl
+    with open(colsAllDomain_path, 'wb') as f:
+        pickle.dump(clos_alldomain, f, protocol=PKL_PROTO)
+    
         
-    return lw_dataset
+    return lw_dataset, clos_alldomain
