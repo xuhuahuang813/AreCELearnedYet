@@ -27,7 +27,7 @@
             //     "-wbase",
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 0.9, 'domain_ood': 0.1}, 'width': {'uniform': 0.5, 'exponential': 0.5}, 'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
             // ],
-            //  生成lstm queryload
+            //  生成lstm queryload，生成文件路径为data/census13/workload/*.pkl和*-label.pkl。文件若存在则覆盖重写。
             // "args": [
             //     "workload",
             //     "gen",
@@ -37,7 +37,8 @@
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 1.0}, 'width': {'uniform': 1.0}, 'number': {'train': 1000, 'valid': 100, 'test': 100}, 'queryNumPerSeq': 50}",
             //     "--is-lstm"
             // ],
-            // 训练lstm模型
+            // 训练lstm模型。会编码已生成的workload，编码后的中间文件存于data/census13/lstm/original_lstm-small_200_123.pkl。
+            // 若中间文件已有，则直接读取。
             "args": [
                     "train",
                     "-s", "123",
@@ -45,7 +46,7 @@
                     "-v", "original",
                     "-w", "lstm-small",
                     "-e", "lstm",
-                    "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64', \"train_num\": 1000, \"bs\": 32}",
+                    "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '256_256_512_1024_1024', \"train_num\": 1000, \"bs\": 32}",
                     "--sizelimit", "0"
             ],
             // "args": [

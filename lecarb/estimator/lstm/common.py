@@ -109,11 +109,11 @@ def encode_query_y(query:Query, table: Table):
     for col_, pre_ in query.predicates.items():
         if pre_ is not None:
             col_list.append(col_)
-    col_list_str = "".join(col_list)
+    col_list_str = "_".join(col_list)
     
     # 如果已经生成过，则直接返回col_list_str中对应的1w维
     if col_list_str in clos_vector:
-        return clos_vector[col_list_str]
+        return col_list_str, clos_vector[col_list_str]
     else:
         # 当前这些列的组合没有生成过1w维
         # 按照列的顺序，排列所有行
@@ -163,7 +163,7 @@ def encode_query_y(query:Query, table: Table):
         unionDomain[int(last_union_domain) : ] = 1.0
         # 将1w维向量放入字典，避免重复生成
         clos_vector[col_list_str] = unionDomain
-        return clos_vector[col_list_str]
+        return col_list_str, clos_vector[col_list_str]
 
 
 # 编码X
@@ -184,6 +184,7 @@ def encode_queries(table:Table, queryset, labels):
     X = [] #编码 [card/rowCount, lowerBound, upperBound, ...]
     y = [] #10000维向量
     card = [] # card
+    colList = [] # 存储每50个query是对应的哪些列
     
     for i, (query, label) in enumerate(zip(queryset, labels), start=1):
         if i % 1000 == 0:
@@ -191,8 +192,10 @@ def encode_queries(table:Table, queryset, labels):
         X.append(encode_query_X(table, query, label.cardinality))
         card.append(label.cardinality)
         if i % 50 == 0:
-            y.append(encode_query_y(query, table))
-    return X, y, card
+            col_l, y_vector = encode_query_y(query, table)
+            y.append(y_vector)
+            colList.append(col_l)
+    return X, y, card, colList
     
 
 # load training dataset
@@ -205,10 +208,10 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
 
     # query的pkl存储路径。如果生成过则直接加载。e.g.data/census13/lw/original_base_200_123.pkl。
     file_path = query_path / f"{table.version}_{workload}_{bins}_{seed}.pkl"
-    if file_path.is_file():
-        L.info(f"features already built in file {file_path}")
-        with open(file_path, 'rb') as f:
-            return pickle.load(f)
+    # if file_path.is_file():
+    #     L.info(f"features already built in file {file_path}")
+    #     with open(file_path, 'rb') as f:
+    #         return pickle.load(f)
     
     L.info(f"Start loading queryset:{workload} and labels for version {table.version} of dataset {table.dataset}...")
     

@@ -216,7 +216,7 @@ def query_2_quicksel_vector(query: Query, table: Table, discrete_cols=set()):
 def dump_queryset(dataset: str, name: str, queryset: Dict[str, List[Query]]) -> None:
     query_path = DATA_ROOT / dataset / "workload"
     query_path.mkdir(exist_ok=True)
-    with open(query_path / f"{name}.pkl", 'wb') as f:
+    with open(query_path / f"{name}.pkl", 'wb') as f: # wb表示二进制方式写入。如果文件已经存在，则被覆盖。
         pickle.dump(queryset, f, protocol=PKL_PROTO)
 
 def load_queryset(dataset: str, name: str) -> Dict[str, List[Query]]:
