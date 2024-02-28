@@ -5,11 +5,13 @@ lstm模型训练及验证
 import time
 import logging
 from typing import Dict, Any, Tuple
+import matplotlib.pyplot as plt
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
+from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
 from ...dataset.dataset import load_table
 from .common import load_lstm_dataset
@@ -25,7 +27,7 @@ class Args:
     def __init__(self, **kwargs):
         self.bs = 32
         self.epochs = 500
-        self.lr = 0.01 # default value in both pytorch and keras
+        self.lr = 0.001 # default value in both pytorch and keras
         self.hid_units = '256_256_512_1024_4096'
         self.bins = 200
         self.train_num = 1000 # 默认验证和测试是训练的1/10
@@ -88,7 +90,13 @@ def make_dataset(dataset, num=-1):
         return TextDataset(X, y, gt, colList)
     else:
         return TextDataset(X[:num], y[:num], gt[:num], colList[:num])
+
+# 解码模型输出
+def decodePreds(inputs, preds, truecards, collist):
+    # L.info("here")
+    return None
     
+
 def train_lstm(seed, dataset, version, workload, params, sizelimit):
     L.info(f"training LSTM model with seed {seed}")
     
@@ -133,14 +141,23 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     model_path = MODEL_ROOT / table.dataset
     model_path.mkdir(parents=True, exist_ok=True)
     model_file = model_path / f"{table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
-        
+    
     # BCEWithLogitsLoss损失函数，不能使preds趋近于[0, 1]区间中，训练过程趋向[-5, 9]
     # criterion = nn.BCEWithLogitsLoss()
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
+    # criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
+    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters())
+    # scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+    
     best_valid_loss = float('inf')
 
+    # 记录全部训练过程中的损失
+    train_loss_list = []
+    valid_loss_list = []
+    loss_file = model_path / f"{table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
+    
     start_stmp = time.time()
     valid_time = 0
     for epoch in range(args.epochs):
@@ -158,10 +175,13 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
             optimizer.step()
             
             train_losses.append(loss.item())  
-        avg_train_loss = sum(train_losses) / len(train_losses)  # 计算平均损失
+        avg_train_loss = sum(train_losses) / len(train_losses) 
+        train_loss_list.append(avg_train_loss)
         dur_min = (time.time() - start_stmp) / 60
-        L.info(f"Epoch {epoch+1}, loss: {avg_train_loss}, time since start: {dur_min:.1f} mins")
-        
+        L.info(f"Epoch {epoch+1}, loss: {avg_train_loss}, time since start: {dur_min:.1f} mins, lr: {optimizer.param_groups[0]['lr']}")
+        # 在每个epoch结束时更新学习率
+        # scheduler.step()
+
         L.info(f"Test on valid set...")
         valid_stmp = time.time()
         model.eval()
@@ -175,9 +195,14 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
                 preds = model(inputs)
                 val_loss = criterion(preds, labels)
                 val_losses.append(val_loss.item())
+                # 计算每个inputs在preds上的cardinality estimation与truecards的差（q-error）
+                decodePreds(inputs, preds, truecards, collist)
 
         avg_val_loss = sum(val_losses) / len(val_losses)
+        valid_loss_list.append(avg_val_loss)
         L.info(f"Validation Loss: {avg_val_loss}")
+        # 动态调整学习率
+        scheduler.step(avg_val_loss)
         # TODO 计算metrics，即qerror
         metrics = 1
         
@@ -194,6 +219,31 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         valid_time += time.time() - valid_stmp
 
     L.info(f"Training finished! Time spent since start: {(time.time()-start_stmp)/60:.2f} mins")
-    L.info(f"Model saved to {model_file}, best valid: {state['valid_error']}")
+    L.info(f"Model saved to {model_file}, best valid: {state['valid_error']}, best valid loss: {best_valid_loss}")
 
+    # train和valid使用同一个y轴
+    plt.plot(train_loss_list, label='Training Loss')
+    plt.plot(valid_loss_list, label='Validation Loss')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss Over Epochs')
+    plt.savefig(loss_file)
+    
+    '''
+    # train和valid使用两个y轴
+    fig, ax1 = plt.subplots()
+    ax1.plot(train_loss_list, label='Training Loss', color='blue')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Training Loss', color='blue')
+    ax1.tick_params(axis='y', labelcolor='blue')
+    ax2 = ax1.twinx()
+    ax2.plot(valid_loss_list, label='Validation Loss', color='red')
+    ax2.set_ylabel('Validation Loss', color='red')
+    ax2.tick_params(axis='y', labelcolor='red')
+    ax1.legend(loc='upper left')
+    ax2.legend(loc='lower left')
+    plt.title('Training and Validation Loss Over Epochs')
+    plt.savefig(loss_file)
+    '''
         
