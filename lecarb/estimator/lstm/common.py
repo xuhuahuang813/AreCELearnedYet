@@ -151,7 +151,10 @@ def encode_query_y(query:Query, table: Table):
         # 合并原始的grouped_counts中的count和cumulative_probability列，只保留存在的行
         grouped_counts = pd.merge(result_df, grouped_counts, how='inner', on=col_list)
         # 保存到clos_alldomain
-        clos_alldomain[col_list_str] = grouped_counts[col_list + ['index_alldomain']]
+        for col in col_list:
+            # result_df[col] = table.columns[col].value_2_domain[result_df[col]]
+            result_df[col] = result_df[col].apply(lambda x: table.columns[col].value_2_domain[x])
+        clos_alldomain[col_list_str] = result_df
         
         unionDomain = np.zeros(10000) # 1w维向量
         # 给unionDomain数组赋值

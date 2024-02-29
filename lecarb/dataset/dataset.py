@@ -98,8 +98,12 @@ class Column(object):
     
     # hxh 为该列中的每一个词计算域。因多次用到，所以存在Table的原信息中
     def func_value_2_domain(self):
-        for vocab_ in self.vocab:
-            self.value_2_domain[vocab_] = self.normalize_lstm(vocab_)
+        if is_categorical(self.dtype):
+            for vocab_ in self.vocab:
+                self.value_2_domain[vocab_] = self.normalize_lstm(vocab_)
+        else:
+            for num_ in range(self.minval, self.maxval + 1):
+                self.value_2_domain[num_] = self.normalize_lstm(num_)
 
 class Table(object):
     def __init__(self, dataset, version):

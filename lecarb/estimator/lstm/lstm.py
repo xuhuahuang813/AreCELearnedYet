@@ -6,6 +6,7 @@ import time
 import logging
 from typing import Dict, Any, Tuple
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -22,6 +23,9 @@ L = logging.getLogger(__name__)
 # input_dim = 11
 # hidden_dim = 64
 # output_dim = 10000
+
+global_table = None
+global_cols_alldomain = None
 
 class Args:
     def __init__(self, **kwargs):
@@ -91,13 +95,75 @@ def make_dataset(dataset, num=-1):
     else:
         return TextDataset(X[:num], y[:num], gt[:num], colList[:num])
 
-# TODO 解码模型输出
+# 打印qerror百分位点
+def Q_error_print(q_error_list):
+    sorted_q_error_list = np.sort(q_error_list)
+    percentiles = [25, 50, 75, 90]
+    percentile_values = np.percentile(sorted_q_error_list, percentiles)
+    for p, value in zip(percentiles, percentile_values):
+        L.info(f"{p}th percentile: {value}")
+
+
+'''
+解码模型输出
+inputs.shape: torch.Size([32, 50, 11])
+preds.shape: torch.Size([32, 10000])
+collist [50]
+coll 'age/capital_loss'
+'''
 def decodePreds(inputs, preds, truecards, collist):
-    L.info("here")
-    return None
+    global global_table 
+    global global_cols_alldomain 
     
+    latest_inputs = inputs[:, -1, :] # 获取最新的查询。latest_inputs获取最外层32个[50, 11]维数组中，每个50个11维数组的最后一个11维数组。latest_inputs[32, 11]
+    latest_truecards = truecards[:, -1] # 获取最新的truecards
+    
+    # limit_qerr_num = 3
+    q_error_list = []
+    # for qerr_i, (latest_in, latest_tc, coll, pred_cumulate) in enumerate(zip(latest_inputs, latest_truecards, collist, preds)):
+    total_iterations = len(latest_inputs)
+    for qerr_i, (latest_in, latest_tc, coll, pred_cumulate) in tqdm(enumerate(zip(latest_inputs, latest_truecards, collist, preds)), total=total_iterations, desc="Processing"):
+        
+        # TODO 为了加速计算，每一个iteration只算limit_qerr_num个query的q-error
+        # if qerr_i >= limit_qerr_num:
+        #     break
+        # TODO 为了加速计算所以continue
+        if "capital_loss" in coll:
+            continue
+        
+        # L.info(f"{coll}")
+        coll_list = coll.split("/")
+        col_df = global_cols_alldomain[coll]
+        
+        domain_list = [] # 存储所有满足query谓词的联合域的域位置。存储的是10000维数组中满足的index。
+        for _, row in col_df.iterrows():
+            row_in_domain = True
+            for coll_index in range(len(coll_list)):
+                if(row[coll_list[coll_index]] < latest_in[coll_index*2 - 1] or row[coll_list[coll_index]] > latest_in[coll_index*2]):
+                    row_in_domain = False
+                if row_in_domain == False:
+                    break
+            if row_in_domain == True:
+                domain_list.append(row["index_alldomain"])
+            
+        pred = [pred_cumulate[i] - pred_cumulate[i-1] if i > 0 else pred_cumulate[i] for i in range(len(pred_cumulate))]
+        selected_elements = [pred[int(i)] for i in domain_list]
+        result_sum = np.sum(selected_elements)
+        result_card = result_sum * global_table.row_num
+        q_error = Q_error(result_card, latest_tc)
+        # L.info(f"estimate {result_card}; true {latest_tc}; q-error {q_error}")
+        q_error_list.append(q_error)           
+    return q_error_list
+
+def Q_error(estimate_card, true_card):
+    if estimate_card <= 0:
+        estimate_card = 1
+    return max(estimate_card/true_card, true_card/estimate_card)
 
 def train_lstm(seed, dataset, version, workload, params, sizelimit):
+    global global_table 
+    global global_cols_alldomain 
+    
     L.info(f"training LSTM model with seed {seed}")
     
     # uniform thread number
@@ -113,10 +179,10 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     args = Args(**params)
     
     # 加载数据集，将csv文件转为Table类
-    table = load_table(dataset, version)
+    global_table = load_table(dataset, version)
     
     # 加载训练、验证数据集，加载cols_alldomain用于解码
-    dataset, cols_alldomain = load_lstm_dataset(table, workload, seed, params['bins'])
+    dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload, seed, params['bins'])
     
     # 加载训练集和验证集
     train_dataset = make_dataset(dataset['train'], int(args.train_num))
@@ -133,15 +199,15 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         'args': args,
         'device': DEVICE,
         'threads': torch.get_num_threads(),
-        'dataset': table.dataset,
-        'version': table.version,
+        'dataset': global_table.dataset,
+        'version': global_table.version,
         'workload': workload,
         # 'model_size': model_size,
         # 'fea_num': 11,
     }
-    model_path = MODEL_ROOT / table.dataset
+    model_path = MODEL_ROOT / global_table.dataset
     model_path.mkdir(parents=True, exist_ok=True)
-    model_file = model_path / f"{table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
+    model_file = model_path / f"{global_table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
     
     # BCEWithLogitsLoss损失函数，不能使preds趋近于[0, 1]区间中，训练过程趋向[-5, 9]
     # criterion = nn.BCEWithLogitsLoss()
@@ -157,7 +223,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # 记录全部训练过程中的损失
     train_loss_list = []
     valid_loss_list = []
-    loss_file = model_path / f"{table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
+    valid_qerror_list = []
+    loss_file = model_path / f"{global_table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
     
     start_stmp = time.time()
     valid_time = 0
@@ -187,6 +254,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         valid_stmp = time.time()
         model.eval()
         val_losses = []
+        val_qerror = []
         for _, data in enumerate(valid_loader):
             inputs, labels, truecards, collist = data
             inputs = inputs.to(DEVICE).float()
@@ -197,22 +265,25 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
                 val_loss = criterion(preds, labels)
                 val_losses.append(val_loss.item())
                 # 计算每个inputs在preds上的cardinality estimation与truecards的差（q-error）
-                decodePreds(inputs, preds, truecards, collist)
+                val_qerror += decodePreds(inputs, preds, truecards, collist)
 
         avg_val_loss = sum(val_losses) / len(val_losses)
         valid_loss_list.append(avg_val_loss)
-        L.info(f"Validation Loss: {avg_val_loss}")
+        
+        Q_error_print(val_qerror)
+        avg_qerr = sum(val_qerror) / len(val_qerror)
+        valid_qerror_list.append(avg_qerr)
+        
+        L.info(f"Validation Loss: {avg_val_loss}, avg qerror: {avg_qerr}")
         # 动态调整学习率
         scheduler.step(avg_val_loss)
-        # TODO 计算metrics，即qerror
-        metrics = 1
         
         if avg_val_loss < best_valid_loss:
             L.info('***** best valid loss for now!')
             best_valid_loss = avg_val_loss
             state['model_state_dict'] = model.state_dict()
             state['optimizer_state_dict'] = optimizer.state_dict()
-            state['valid_error'] = {workload: metrics}
+            state['valid_error'] = {workload: avg_qerr}
             state['train_time'] = (valid_stmp-start_stmp-valid_time) / 60
             state['current_epoch'] = epoch
             torch.save(state, model_file)
@@ -223,28 +294,37 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     L.info(f"Model saved to {model_file}, best valid: {state['valid_error']}, best valid loss: {best_valid_loss}")
 
     # train和valid使用同一个y轴
-    plt.plot(train_loss_list, label='Training Loss')
-    plt.plot(valid_loss_list, label='Validation Loss')
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss Over Epochs')
-    plt.savefig(loss_file)
+    # plt.plot(train_loss_list, label='Training Loss')
+    # plt.plot(valid_loss_list, label='Validation Loss')
+    # plt.legend()
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss')
+    # plt.title('Training and Validation Loss Over Epochs')
+    # plt.savefig(loss_file)
     
-    '''
-    # train和valid使用两个y轴
+    
+    # train_loss_list 和 valid_loss_list 将使用左轴，而 valid_qerror_list 将使用右轴。
     fig, ax1 = plt.subplots()
+    # Plot training loss and validation loss on the left y-axis
     ax1.plot(train_loss_list, label='Training Loss', color='blue')
+    ax1.plot(valid_loss_list, label='Validation Loss', color='red')
     ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Training Loss', color='blue')
-    ax1.tick_params(axis='y', labelcolor='blue')
+    ax1.set_ylabel('Loss', color='black')
+    ax1.tick_params(axis='y', labelcolor='black')
+
+    # Create a second y-axis for valid_qerror_list on the right
     ax2 = ax1.twinx()
-    ax2.plot(valid_loss_list, label='Validation Loss', color='red')
-    ax2.set_ylabel('Validation Loss', color='red')
-    ax2.tick_params(axis='y', labelcolor='red')
+    ax2.plot(valid_qerror_list, label='Validation QError', color='green')
+    ax2.set_ylabel('Validation QError', color='green')
+    ax2.tick_params(axis='y', labelcolor='green')
+
+    # Set legends
     ax1.legend(loc='upper left')
-    ax2.legend(loc='lower left')
-    plt.title('Training and Validation Loss Over Epochs')
+    ax2.legend(loc='upper right')
+
+    # Set title and save the figure
+    plt.title('Training Loss, Validation Loss, and Validation QError Over Epochs')
     plt.savefig(loss_file)
-    '''
+
+        
         
