@@ -215,6 +215,7 @@ def load_lstm_dataset(table:Table, workload, seed, bins):
     # cols_alldomain的pkl存储路径。data/census13/lstm/original_lstm-small_200_123_colsAllDomain.pkl
     colsAllDomain_path = query_path / f"{table.version}_{workload}_{bins}_{seed}_colsAllDomain.pkl"
     
+    # TODO 记得反注释
     if file_path.is_file() and colsAllDomain_path.is_file():
         L.info(f"features already built in file {file_path}, domain of all columns already build in file {colsAllDomain_path}")
         with open(file_path, 'rb') as f1, open(colsAllDomain_path, 'rb') as f2:

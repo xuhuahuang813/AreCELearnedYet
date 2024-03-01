@@ -3,6 +3,7 @@ hxh
 lstm模型训练及验证
 
 TODO 
+query编码和联合域global_cols_alldomain不对应
 lstm层数量
 args.hid_units
 loss function

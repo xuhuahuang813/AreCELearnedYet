@@ -126,7 +126,13 @@ def wsf_uniform(table: Table, attrs: List[str], centers: List[Any], params: Dict
             query.predicates[a] = ('=', c)
             continue
         col = table.columns[a]
-        width = random.uniform(0, col.maxval-col.minval)
+        
+        # width = random.uniform(0, col.maxval-col.minval)
+        # 保证width是范围内的偶数，这样可以保证query中都是整数
+        width = random.randint(0, col.maxval-col.minval)
+        if width % 2 != 0:
+            width += 1
+            
         query.predicates[a] = parse_range(col, c-width/2, c+width/2)
     return query
 
