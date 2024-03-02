@@ -210,8 +210,11 @@ class QueryGenerator(object):
     def generate_lstm(self, queryNumPerSeq:int) -> List[Query]:
         # groupSize=g domain (num_domain_left[g], num_domain_right[g]]
         num_domain_left = [0, 0, 21, 10, 0, 0]
-        num_domain_right = [0, 10000, 100, 21, 10, 10]
-    
+        
+        # TODO 能否支持更多列
+        # num_domain_right = [0, 10000, 100, 21, 10, 10] # 包含"capital_gain"列，min=0, max=99999, vocab size=123 【这个列会导致query解码时间很长】
+        num_domain_right = [0, 100, 100, 21, 10, 10]
+
         queries = []
         
         # 选择列

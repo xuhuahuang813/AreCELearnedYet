@@ -112,12 +112,23 @@ def make_dataset(dataset, num=-1):
 q_error_list: 单个epoch内所有q_error
 '''
 def Q_error_print(q_error_list):
-    sorted_q_error_list = np.sort(q_error_list)
+    # 直接打印百分比
+    # sorted_q_error_list = np.sort(q_error_list)
+    # percentiles = [25, 50, 75, 90]
+    # percentile_values = np.percentile(sorted_q_error_list, percentiles)
+    # for p, value in zip(percentiles, percentile_values):
+    #     L.info(f"{p}th percentile: {value}")
+
+
+    # 只打印非inf数值的百分比
+    q_error_list_noinf = [value.item() for value in q_error_list if value.item() != float('inf')]
+    sorted_q_error_list = np.sort(q_error_list_noinf)
     percentiles = [25, 50, 75, 90]
     percentile_values = np.percentile(sorted_q_error_list, percentiles)
+    inf_count = len(q_error_list) - len(q_error_list_noinf)
     for p, value in zip(percentiles, percentile_values):
         L.info(f"{p}th percentile: {value}")
-
+    L.info(f"Number of 'inf' values: {inf_count}, Number of non 'inf' values: {len(q_error_list_noinf)}")
 
 '''
 解码模型输出
@@ -130,8 +141,9 @@ def decodePreds(inputs, preds, truecards, collist):
     global global_table 
     global global_cols_alldomain 
     
-    latest_inputs = inputs[:, -1, :] # 获取最新的查询。latest_inputs获取最外层32个[50, 11]维数组中，每个50个11维数组的最后一个11维数组。latest_inputs[32, 11]
-    latest_truecards = truecards[:, -1] # 获取最新的truecards
+    latest_inputs = inputs[:, -1, :].to('cpu') # 获取最新的查询。latest_inputs获取最外层32个[50, 11]维数组中，每个50个11维数组的最后一个11维数组。latest_inputs[32, 11]
+    latest_truecards = truecards[:, -1].to('cpu') # 获取最新的truecards
+    preds = preds.to('cpu') 
     
     # limit_q_error_num = 3
     q_error_list = []
@@ -164,6 +176,7 @@ def decodePreds(inputs, preds, truecards, collist):
         domain_list_sum = np.sum([pred[int(i)] for i in domain_list]) # domain_list上所有分位点概率和
         estimate_card = domain_list_sum * global_table.row_num # 预估的基数
         q_error = Q_error(estimate_card, latest_tc) # 计算q_error
+        # L.info(type(q_error))
         # L.info(f"estimate {estimate_card}; true {latest_tc}; q-error {q_error}")
         q_error_list.append(q_error)           
     return q_error_list
@@ -174,9 +187,18 @@ estimate_card: 预估的基数
 true_card: 真实基数
 '''
 def Q_error(estimate_card, true_card):
-    if estimate_card <= 0:
-        estimate_card = 1
+    # 如果预测值是负数，则认为预测值是1
+    # if estimate_card <= 0:
+    #     estimate_card = 1
+    # return max(estimate_card/true_card, true_card/estimate_card)
+
+    # 如果预测的是负数，则qerror直接返回表行数（最大值）
+    if estimate_card < 0:
+        return torch.tensor(float('inf'))
+    if estimate_card == 0:
+        estimate_card = torch.tensor([1])
     return max(estimate_card/true_card, true_card/estimate_card)
+        
 
 '''
 模型训练
