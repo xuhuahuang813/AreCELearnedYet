@@ -162,7 +162,7 @@ just test-lw-nn original_base-lwnn_hid2048_1024_512_256_bin200_ep500_bs32_100k-1
 ### LSTM
 ```bash
 # census
-just train-lstm census13 original lstm-small 256_256_512_1024_1024 200 1000 32 0 123
+just train-lstm census13 original lstm-small 256_256_512_1024_1024 200 1000 32 0 123 MSELoss
 ```
 
 ### LW-XGB

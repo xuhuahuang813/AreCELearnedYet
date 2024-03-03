@@ -42,6 +42,7 @@ class Args:
         self.hid_units = '256_256_512_1024_4096'
         self.bins = 200 # 用于路径命名，没有实际作用
         self.train_num = 1000 # 默认验证和测试是训练的1/10
+        self.lossfunc = 'MSELoss'
 
         # 使用传入参数，重写超参
         self.__dict__.update(kwargs)
@@ -313,15 +314,23 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     }
     model_path = MODEL_ROOT / global_table.dataset
     model_path.mkdir(parents=True, exist_ok=True)
-    model_file = model_path / f"{global_table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
+    model_file = model_path / f"{global_table.version}_{workload}-{model.name()}_loss{args.lossfunc}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.pt"
     
     # 设置损失函数、优化器、自适应学习率
-    # BCEWithLogitsLoss损失函数，不能使preds趋近于[0, 1]区间中，训练过程趋向[-5, 9]
-    # criterion = nn.BCEWithLogitsLoss()
-    # criterion = nn.MSELoss()
-    criterion = nn.L1Loss()
+    if(args.lossfunc == 'MSELoss'):
+        criterion = nn.MSELoss() # MSELoss比L1Loss好
+    elif(args.lossfunc == 'SmoothL1Loss'):
+        criterion = nn.SmoothL1Loss() # 和MSELoss差不多
+    elif(args.lossfunc == 'L1Loss'):
+        criterion = nn.L1Loss() 
+    elif(args.lossfunc == 'KLDivLoss'): # 不可以
+        criterion = nn.KLDivLoss() 
+    elif(args.lossfunc == 'BCEWithLogitsLoss'):
+        criterion = nn.BCEWithLogitsLoss() # BCEWithLogitsLoss损失函数，不能使preds趋近于[0, 1]区间中，训练过程趋向[-5, 9]    
+
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    optimizer = torch.optim.Adam(model.parameters()) # Adam默认lr是1e-3
+    # optimizer = torch.optim.Adam(model.parameters()) # Adam默认lr是1e-3
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001)
     # scheduler = StepLR(optimizer, step_size=50, gamma=0.1) # 每step_size, lr = lr * gamma
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True) # 自适应调整lr
     
@@ -331,7 +340,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # valid_avgqerror_epoch_list = [] # 每个epoch平均qerror
     valid_qerror_epoch_list = [] # 每个epoch所有qerror列表 (不包含inf和None)
     # 训练过程图片输出路径
-    train_fig_file = model_path / f"{global_table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
+    train_fig_file = model_path / f"{global_table.version}_{workload}-{model.name()}_loss{args.lossfunc}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
     
     # 初始化
     valid_time = 0
@@ -433,11 +442,10 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     ax1.legend(loc='upper left') # 在左轴上添加图例
     
     ax2 = ax1.twinx() # 在同一个图表上创建一个新的y轴，与原始的y轴（ax1）共享x轴。
-    # ax2.plot(valid_avgqerror_epoch_list, label='Validation QError', color='green')
-    ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True)
+    ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True, widths=6)
     ax2.set_ylabel('Validation QError', color='green')
     ax2.tick_params(axis='y', labelcolor='green')
-    ax2.set_ylim(10**0, 10**2)  # 设置右轴的纵轴范围
+    ax2.set_ylim(10**-0.5, 10**2)  # 设置右轴的纵轴范围
     ax2.set_yscale('log')
     ax2.legend(loc='upper right')
     
