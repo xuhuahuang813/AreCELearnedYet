@@ -3,8 +3,8 @@
 # nohup ./hxh_0_run.sh &
 # poetry run python -m lecarb train -s123 -dcensus13 -voriginal -wlstm-small -elstm --params "{'epochs': 100, 'bins': 200, 'hid_units': '256_512_1024_2048_4096_4096', 'train_num': 1000, 'bs': 32}" --sizelimit 0
 
-# rm -rf output/model/census13
-# rm -rf hxh_log
+# rm -rf output/model/census13/*
+# rm -rf hxh_log/*
 
 # dataset='census13'
 # version='original'
@@ -31,10 +31,15 @@
 datasets=('census13')
 versions=('original')
 workloads=('lstm-small')
-hid_units=('256_512_1024_2048_4096_8192' '256_512_1024_2048_4096_4096')
+hid_units=('256_512_1024_2048_4096' \
+            '256_512_1024_2048' \
+            '256_256_2048_2048' \
+            '64_128_256_512_1024_2048' \
+            '64_128_256_512_1024_2048_4096'\
+            '512_1024_2048')
 bins=('200')
 train_nums=('1000')
-bs=('32')
+bss=('16' '32')
 sizelimits=('0')
 seeds=('123')
 lossfuncs=('MSELoss')
@@ -47,7 +52,7 @@ for dataset in "${datasets[@]}"; do
       for hid_unit in "${hid_units[@]}"; do
         for bin in "${bins[@]}"; do
           for train_num in "${train_nums[@]}"; do
-            for bs in "${bs[@]}"; do
+            for bs in "${bss[@]}"; do
               for sizelimit in "${sizelimits[@]}"; do
                 for seed in "${seeds[@]}"; do
                   for lossfunc in "${lossfuncs[@]}"; do

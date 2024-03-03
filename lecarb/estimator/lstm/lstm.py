@@ -141,6 +141,7 @@ collist [50]
 coll 'age/capital_loss'
 '''
 def decodePreds(inputs, preds, truecards, collist):
+    # return [torch.tensor(2)]
     global global_table 
     global global_cols_alldomain 
     
@@ -434,6 +435,9 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         valid_qerror_list 使用右轴, 箱型图
     '''
     fig, ax1 = plt.subplots()
+    # train_avgloss_epoch_list[0]是一个很大的数，导致折线图没有意义
+    if train_avgloss_epoch_list[0] > 0.1:
+        train_avgloss_epoch_list[0] = 0.1
     ax1.plot(train_avgloss_epoch_list, label='Training Loss', color='blue')
     ax1.plot(valid_avgloss_epoch_list, label='Validation Loss', color='red')
     ax1.set_xlabel('Epoch')

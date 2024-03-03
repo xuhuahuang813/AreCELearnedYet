@@ -46,7 +46,7 @@
                     "-v", "original",
                     "-w", "lstm-small",
                     "-e", "lstm",
-                    "--params", "{\"epochs\": 10, \"bins\": 200, \"hid_units\": '256_256_512_1024_1024', \"train_num\": 1000, \"bs\": 32, \"lossfunc\": 'MSELoss'}",
+                    "--params", "{\"epochs\": 100, \"bins\": 200, \"hid_units\": '256_256_512_1024_1024', \"train_num\": 1000, \"bs\": 32, \"lossfunc\": 'MSELoss'}",
                     "--sizelimit", "0"
             ],
             // "args": [
