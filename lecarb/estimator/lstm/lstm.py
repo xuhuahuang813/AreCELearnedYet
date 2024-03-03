@@ -3,7 +3,7 @@ hxh
 lstm模型训练及验证
 
 TODO 
-query编码和联合域global_cols_alldomain不对应
+【√】query编码和联合域global_cols_alldomain不对应
 lstm层数量
 args.hid_units
 loss function
@@ -13,6 +13,7 @@ import logging
 from typing import Dict, Any, Tuple
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+# import concurrent.futures
 
 import numpy as np
 import torch
@@ -121,7 +122,8 @@ def Q_error_print(q_error_list):
 
 
     # 只打印非inf数值的百分比
-    q_error_list_noinf = [value.item() for value in q_error_list if value.item() != float('inf')]
+    # q_error_list_noinf = [value.item() for value in q_error_list if value.item() != float('inf')]
+    q_error_list_noinf = [value.item() for value in q_error_list if value is not None and value.item() != float('inf')]
     sorted_q_error_list = np.sort(q_error_list_noinf)
     percentiles = [25, 50, 75, 90]
     percentile_values = np.percentile(sorted_q_error_list, percentiles)
@@ -180,6 +182,67 @@ def decodePreds(inputs, preds, truecards, collist):
         # L.info(f"estimate {estimate_card}; true {latest_tc}; q-error {q_error}")
         q_error_list.append(q_error)           
     return q_error_list
+
+
+'''
+并行decodePreds
+'''
+# def decodePreds_parallel(inputs, preds, truecards, collist):
+#     global global_table 
+#     global global_cols_alldomain 
+    
+#     latest_inputs = inputs[:, -1, :] # 获取最新的查询。latest_inputs获取最外层32个[50, 11]维数组中，每个50个11维数组的最后一个11维数组。latest_inputs[32, 11]
+#     latest_truecards = truecards[:, -1] # 获取最新的truecards
+#     # preds = preds.to('cpu') 
+    
+#     total_iterations = len(latest_inputs)
+#     q_error_list = []
+
+#     with concurrent.futures.ThreadPoolExecutor() as executor:
+#         # Use ThreadPoolExecutor for CPU-bound tasks; for IO-bound tasks, consider ProcessPoolExecutor
+#         futures = {executor.submit(process_iteration, qerr_i, latest_in, latest_tc, coll, pred_cumulate):
+#                    (qerr_i, latest_in, latest_tc, coll, pred_cumulate) for qerr_i, (latest_in, latest_tc, coll, pred_cumulate)
+#                    in enumerate(zip(latest_inputs, latest_truecards, collist, preds))}
+        
+#         for future in tqdm(concurrent.futures.as_completed(futures), total=total_iterations, desc="Processing"):
+#             try:
+#                 q_error_list.append(future.result())
+#             except Exception as e:
+#                 print(f"An error occurred: {e}")
+                
+#     return q_error_list
+
+'''
+并行decodePreds 单个线程
+'''
+# def process_iteration(qerr_i, latest_in, latest_tc, coll, pred_cumulate):
+#     global global_table 
+#     global global_cols_alldomain 
+    
+#     if "capital_loss" in coll:
+#         return None  # Skip processing for "capital_loss"
+
+#     coll_list = coll.split("/")  # coll 'age/capital_loss'
+#     col_df = global_cols_alldomain[coll]  # col_df是coll(age/capital_loss')对应的联合域信息
+    
+#     domain_list = []  # 存储所有满足query谓词的联合域的域位置。即10000维数组中满足query的index。
+#     for _, row in col_df.iterrows():
+#         row_in_domain = True
+#         for coll_list_index in range(len(coll_list)):
+#             if (row[coll_list[coll_list_index]] < latest_in[(coll_list_index + 1) * 2 - 1] or row[coll_list[coll_list_index]] > latest_in[(coll_list_index + 1) * 2]):
+#                 row_in_domain = False
+#             if row_in_domain == False:
+#                 break
+#         if row_in_domain == True:
+#             domain_list.append(row["index_alldomain"])
+        
+#     pred = [pred_cumulate[i] - pred_cumulate[i - 1] if i > 0 else pred_cumulate[i] for i in range(len(pred_cumulate))]  # pred_cumulate是累计概率。pred是当前分位点的概率。
+#     domain_list_sum = np.sum([pred[int(i)] for i in domain_list])  # domain_list上所有分位点概率和
+#     estimate_card = domain_list_sum * global_table.row_num  # 预估的基数
+#     q_error = Q_error(estimate_card, latest_tc)  # 计算q_error
+    
+#     return q_error
+
 
 '''
 计算q_error
@@ -265,7 +328,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # 记录全部训练过程中的信息
     train_avgloss_epoch_list = []
     valid_avgloss_epoch_list = []
-    valid_avgqerror_epoch_list = []
+    # valid_avgqerror_epoch_list = [] # 每个epoch平均qerror
+    valid_qerror_epoch_list = [] # 每个epoch所有qerror列表 (不包含inf和None)
     # 训练过程图片输出路径
     train_fig_file = model_path / f"{global_table.version}_{workload}-{model.name()}_bin{args.bins}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
     
@@ -312,16 +376,20 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
                 val_loss = criterion(preds, labels)
                 val_loss_iter_list.append(val_loss.item())
                 # 计算每个inputs在preds上的cardinality estimation与truecards的差（q-error）
-                val_q_error_iter_list += decodePreds(inputs, preds, truecards, collist)
+                if (epoch + 1) == 1 or (epoch + 1) % 10 == 0:
+                    val_q_error_iter_list += decodePreds(inputs, preds, truecards, collist)
+                    # val_q_error_iter_list += decodePreds_parallel(inputs, preds, truecards, collist)
 
         avg_val_loss = sum(val_loss_iter_list) / len(val_loss_iter_list)
         valid_avgloss_epoch_list.append(avg_val_loss)
         
-        Q_error_print(val_q_error_iter_list)
-        avg_q_error = sum(val_q_error_iter_list) / len(val_q_error_iter_list)
-        valid_avgqerror_epoch_list.append(avg_q_error)
+        if (epoch + 1) == 1 or (epoch + 1) % 10 == 0:
+            Q_error_print(val_q_error_iter_list)
+            avg_q_error = sum(val_q_error_iter_list) / len(val_q_error_iter_list)
+            # valid_avgqerror_epoch_list.append(avg_q_error)
+            valid_qerror_epoch_list.append([value.item() for value in val_q_error_iter_list if value is not None and value.item() != float('inf')])
         
-        L.info(f"Validation Loss: {avg_val_loss}, avg qerror: {avg_q_error}")
+        L.info(f"Validation Loss: {avg_val_loss}")
         # 自适应调整lr【scheduler = ReduceLROnPlateau时使用】
         scheduler.step(avg_val_loss)
         
@@ -352,7 +420,9 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # plt.savefig(train_fig_file)
     
     '''
-    画图 train_avgloss_epoch_list 和 valid_avgloss_epoch_list 将使用左轴，而 valid_qerror_list 将使用右轴。
+    画图 
+        train_avgloss_epoch_list 和 valid_avgloss_epoch_list 使用左轴, 折线图
+        valid_qerror_list 使用右轴, 箱型图
     '''
     fig, ax1 = plt.subplots()
     ax1.plot(train_avgloss_epoch_list, label='Training Loss', color='blue')
@@ -360,14 +430,16 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss', color='black')
     ax1.tick_params(axis='y', labelcolor='black')
+    ax1.legend(loc='upper left') # 在左轴上添加图例
+    
     ax2 = ax1.twinx() # 在同一个图表上创建一个新的y轴，与原始的y轴（ax1）共享x轴。
-    ax2.plot(valid_avgqerror_epoch_list, label='Validation QError', color='green')
+    # ax2.plot(valid_avgqerror_epoch_list, label='Validation QError', color='green')
+    ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True)
     ax2.set_ylabel('Validation QError', color='green')
     ax2.tick_params(axis='y', labelcolor='green')
-    ax1.legend(loc='upper left')
+    ax2.set_ylim(10**0, 10**2)  # 设置右轴的纵轴范围
+    ax2.set_yscale('log')
     ax2.legend(loc='upper right')
+    
     plt.title('Training Loss, Validation Loss, and Validation QError Over Epochs')
     plt.savefig(train_fig_file)
-
-        
-        

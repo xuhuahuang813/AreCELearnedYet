@@ -287,9 +287,9 @@ train-lw-nn-update dataset='census13' version='original' workload='base' hid_uni
 
 # hxh 
 # TODO
-train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='64' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123':
+train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='256_256_512_1024_1024' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
-        "{'epochs': 500, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
+        "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 train-lw-tree dataset='census13' version='original' workload='base' trees='16' bins='200' train_num='1000' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_tree --params \
