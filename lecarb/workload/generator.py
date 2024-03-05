@@ -219,7 +219,7 @@ class QueryGenerator(object):
         
         # 选择列
         num_pred = np.random.randint(1, 4) # 单个查询中包含列的个数
-        attr_domain = [c for c in list(self.table.data.columns) if self.table.columns[c].vocab_size > num_domain_left[num_pred] and self.table.columns[c].vocab_size <= num_domain_right[num_pred]]
+        attr_domain = [c for c in list(self.table.data.columns) if self.table.columns[c].vocab_size > num_domain_left[num_pred] and self.table.columns[c].vocab_size <= num_domain_right[num_pred] and c != "capital_loss"]
         attr_lst = np.random.choice(attr_domain, size=num_pred, replace=False)
         
         for _ in range(queryNumPerSeq):

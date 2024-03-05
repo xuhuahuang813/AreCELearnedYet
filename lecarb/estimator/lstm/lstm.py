@@ -4,9 +4,11 @@ lstm模型训练及验证
 
 TODO 
 【√】query编码和联合域global_cols_alldomain不对应
-lstm层数量
-args.hid_units
-loss function
+【√】lstm层数量
+【√】args.hid_units
+【√】loss function
+
+测试函数
 '''
 import time
 import logging
@@ -14,6 +16,8 @@ from typing import Dict, Any, Tuple
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 # import concurrent.futures
+import multiprocessing
+from functools import partial
 
 import numpy as np
 import torch
@@ -151,9 +155,10 @@ def decodePreds(inputs, preds, truecards, collist):
     
     # limit_q_error_num = 3
     q_error_list = []
+    
     total_iterations = len(latest_inputs) # 总计算数量，用于tqdm进度展示
-    for q_error_i, (latest_in, latest_tc, coll, pred_cumulate) in tqdm(enumerate(zip(latest_inputs, latest_truecards, collist, preds)), total=total_iterations, desc="Processing"):
-        
+    # for q_error_i, (latest_in, latest_tc, coll, pred_cumulate) in tqdm(enumerate(zip(latest_inputs, latest_truecards, collist, preds)), total=total_iterations, desc="Processing"):
+    for q_error_i, (latest_in, latest_tc, coll, pred_cumulate) in enumerate(zip(latest_inputs, latest_truecards, collist, preds)):
         # TODO 为了加速计算，每一个iteration只算limit_q_error_num个query的q-error
         # if q_error_i >= limit_q_error_num:
         #     break
@@ -185,65 +190,53 @@ def decodePreds(inputs, preds, truecards, collist):
         q_error_list.append(q_error)           
     return q_error_list
 
-
 '''
-并行decodePreds
+多进程decodePreds
 '''
-# def decodePreds_parallel(inputs, preds, truecards, collist):
-#     global global_table 
-#     global global_cols_alldomain 
+def process_iteration(args):
+    q_error_i, (latest_in, latest_tc, coll, pred_cumulate) = args
+    global global_table 
+    global global_cols_alldomain 
     
-#     latest_inputs = inputs[:, -1, :] # 获取最新的查询。latest_inputs获取最外层32个[50, 11]维数组中，每个50个11维数组的最后一个11维数组。latest_inputs[32, 11]
-#     latest_truecards = truecards[:, -1] # 获取最新的truecards
-#     # preds = preds.to('cpu') 
+    if "capital_loss" in coll:
+        return None
     
-#     total_iterations = len(latest_inputs)
-#     q_error_list = []
+    coll_list = coll.split("/")
+    col_df = global_cols_alldomain[coll]
+    
+    domain_list = []
+    for _, row in col_df.iterrows():
+        row_in_domain = True
+        for coll_list_index in range(len(coll_list)):
+            if (row[coll_list[coll_list_index]] < latest_in[(coll_list_index + 1) * 2 - 1] or
+                    row[coll_list[coll_list_index]] > latest_in[(coll_list_index + 1) * 2]):
+                row_in_domain = False
+            if not row_in_domain:
+                break
+        if row_in_domain:
+            domain_list.append(row["index_alldomain"])
+            
+    pred = [pred_cumulate[i] - pred_cumulate[i-1] if i > 0 else pred_cumulate[i] for i in range(len(pred_cumulate))]
+    domain_list_sum = np.sum([pred[int(i)] for i in domain_list])
+    estimate_card = domain_list_sum * global_table.row_num
+    q_error = Q_error(estimate_card, latest_tc)
+    
+    return q_error
 
-#     with concurrent.futures.ThreadPoolExecutor() as executor:
-#         # Use ThreadPoolExecutor for CPU-bound tasks; for IO-bound tasks, consider ProcessPoolExecutor
-#         futures = {executor.submit(process_iteration, qerr_i, latest_in, latest_tc, coll, pred_cumulate):
-#                    (qerr_i, latest_in, latest_tc, coll, pred_cumulate) for qerr_i, (latest_in, latest_tc, coll, pred_cumulate)
-#                    in enumerate(zip(latest_inputs, latest_truecards, collist, preds))}
-        
-#         for future in tqdm(concurrent.futures.as_completed(futures), total=total_iterations, desc="Processing"):
-#             try:
-#                 q_error_list.append(future.result())
-#             except Exception as e:
-#                 print(f"An error occurred: {e}")
-                
-#     return q_error_list
-
-'''
-并行decodePreds 单个线程
-'''
-# def process_iteration(qerr_i, latest_in, latest_tc, coll, pred_cumulate):
-#     global global_table 
-#     global global_cols_alldomain 
+def decodePreds_pool(inputs, preds, truecards, collist):
+    latest_inputs = inputs[:, -1, :].to('cpu')
+    latest_truecards = truecards[:, -1].to('cpu')
+    preds = preds.to('cpu') 
     
-#     if "capital_loss" in coll:
-#         return None  # Skip processing for "capital_loss"
-
-#     coll_list = coll.split("/")  # coll 'age/capital_loss'
-#     col_df = global_cols_alldomain[coll]  # col_df是coll(age/capital_loss')对应的联合域信息
+    q_error_list = []
+    total_iterations = len(latest_inputs)
     
-#     domain_list = []  # 存储所有满足query谓词的联合域的域位置。即10000维数组中满足query的index。
-#     for _, row in col_df.iterrows():
-#         row_in_domain = True
-#         for coll_list_index in range(len(coll_list)):
-#             if (row[coll_list[coll_list_index]] < latest_in[(coll_list_index + 1) * 2 - 1] or row[coll_list[coll_list_index]] > latest_in[(coll_list_index + 1) * 2]):
-#                 row_in_domain = False
-#             if row_in_domain == False:
-#                 break
-#         if row_in_domain == True:
-#             domain_list.append(row["index_alldomain"])
-        
-#     pred = [pred_cumulate[i] - pred_cumulate[i - 1] if i > 0 else pred_cumulate[i] for i in range(len(pred_cumulate))]  # pred_cumulate是累计概率。pred是当前分位点的概率。
-#     domain_list_sum = np.sum([pred[int(i)] for i in domain_list])  # domain_list上所有分位点概率和
-#     estimate_card = domain_list_sum * global_table.row_num  # 预估的基数
-#     q_error = Q_error(estimate_card, latest_tc)  # 计算q_error
+    with multiprocessing.Pool() as pool:
+        func_partial = partial(process_iteration)
+        args = list(enumerate(zip(latest_inputs, latest_truecards, collist, preds)))
+        q_error_list = pool.map(func_partial, args)
     
-#     return q_error
+    return q_error_list
 
 
 '''
@@ -259,7 +252,8 @@ def Q_error(estimate_card, true_card):
 
     # 如果预测的是负数，则qerror直接返回表行数（最大值）
     if estimate_card < 0:
-        return torch.tensor(float('inf'))
+        # return torch.tensor(float('inf'))
+        estimate_card = torch.tensor([1])
     if estimate_card == 0:
         estimate_card = torch.tensor([1])
     return max(estimate_card/true_card, true_card/estimate_card)
@@ -376,6 +370,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         model.eval()
         val_loss_iter_list = [] # 单个epoch内，每个iteration的loss
         val_q_error_iter_list = [] # 单个epoch内，每个iteration的中每个query的q_error
+
+        inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list = [], [], [], [] # 单个epoch内所有inputs
         for _, data in enumerate(valid_loader):
             inputs, labels, truecards, collist = data
             inputs = inputs.to(DEVICE).float()
@@ -387,16 +383,31 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
                 val_loss_iter_list.append(val_loss.item())
                 # 计算每个inputs在preds上的cardinality estimation与truecards的差（q-error）
                 if (epoch + 1) == 1 or (epoch + 1) % 10 == 0:
-                    val_q_error_iter_list += decodePreds(inputs, preds, truecards, collist)
-                    # val_q_error_iter_list += decodePreds_parallel(inputs, preds, truecards, collist)
-
+                    inputs_iter_list.append(inputs)
+                    preds_iter_list.append(preds)
+                    truecards_iter_list.append(truecards)
+                    collist_iter_list += collist
+                    
         avg_val_loss = sum(val_loss_iter_list) / len(val_loss_iter_list)
         valid_avgloss_epoch_list.append(avg_val_loss)
         
         if (epoch + 1) == 1 or (epoch + 1) % 10 == 0:
+            all_inputs = torch.cat(inputs_iter_list, dim=0)
+            all_preds = torch.cat(preds_iter_list, dim=0)
+            all_truecards = torch.cat(truecards_iter_list, dim=0)
+            all_collist = collist_iter_list
+
+            start_decodeT = time.time()
+            # 单线程
+            # val_q_error_iter_list += decodePreds(inputs, preds, truecards, collist)
+            # 多线程
+            # val_q_error_iter_list += decodePreds_parallel(inputs, preds, truecards, collist)
+            # 多进程
+            val_q_error_iter_list += decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+            L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
+            
             Q_error_print(val_q_error_iter_list)
-            avg_q_error = sum(val_q_error_iter_list) / len(val_q_error_iter_list)
-            # valid_avgqerror_epoch_list.append(avg_q_error)
+            avg_q_error = sum([value.item() for value in val_q_error_iter_list if value is not None and value.item() != float('inf')]) / len(val_q_error_iter_list)
             valid_qerror_epoch_list.append([value.item() for value in val_q_error_iter_list if value is not None and value.item() != float('inf')])
         
         L.info(f"Validation Loss: {avg_val_loss}")
@@ -446,7 +457,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     ax1.legend(loc='upper left') # 在左轴上添加图例
     
     ax2 = ax1.twinx() # 在同一个图表上创建一个新的y轴，与原始的y轴（ax1）共享x轴。
-    ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True, widths=6)
+    ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True, widths=6, showfliers=False)
     ax2.set_ylabel('Validation QError', color='green')
     ax2.tick_params(axis='y', labelcolor='green')
     ax2.set_ylim(10**-0.5, 10**2)  # 设置右轴的纵轴范围

@@ -31,12 +31,13 @@
 datasets=('census13')
 versions=('original')
 workloads=('lstm-small')
-hid_units=('256_512_1024_2048_4096' \
-            '256_512_1024_2048' \
-            '256_256_2048_2048' \
-            '64_128_256_512_1024_2048' \
-            '64_128_256_512_1024_2048_4096'\
-            '512_1024_2048')
+# hid_units=('256_512_1024_2048_4096' \
+#             '256_512_1024_2048' \
+#             '256_256_2048_2048' \
+#             '64_128_256_512_1024_2048' \
+#             '64_128_256_512_1024_2048_4096'\
+#             '512_1024_2048')
+hid_units=( '256_512_1024_2048')
 bins=('200')
 train_nums=('1000')
 bss=('16' '32')
@@ -44,7 +45,7 @@ sizelimits=('0')
 seeds=('123')
 lossfuncs=('MSELoss')
 
-tips=''
+tips=('1' '2' '3')
 
 for dataset in "${datasets[@]}"; do
   for version in "${versions[@]}"; do
@@ -56,11 +57,13 @@ for dataset in "${datasets[@]}"; do
               for sizelimit in "${sizelimits[@]}"; do
                 for seed in "${seeds[@]}"; do
                   for lossfunc in "${lossfuncs[@]}"; do
-                    output_file="./hxh_log/${dataset}_${version}_${workload}_${hid_unit}_trainnum${train_num}_bs${bs}_seed${seed}_lossfuc${lossfunc}_${tips}_output.log"
-                    
-                    echo "Output file: $output_file"
-                    
-                    nohup just train-lstm $dataset $version $workload $hid_unit $bin $train_num $bs $sizelimit $seed $lossfunc > $output_file &
+                    for tip in "${tips[@]}"; do
+                      output_file="./hxh_log/${dataset}_${version}_${workload}_${hid_unit}_trainnum${train_num}_bs${bs}_seed${seed}_lossfuc${lossfunc}_${tip}_output.log"
+                      
+                      echo "Output file: $output_file"
+                      
+                      nohup just train-lstm $dataset $version $workload $hid_unit $bin $train_num $bs $sizelimit $seed $lossfunc > $output_file &
+                    done
                   done
                 done
               done

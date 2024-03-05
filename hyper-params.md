@@ -160,9 +160,16 @@ just test-lw-nn original_base-lwnn_hid2048_1024_512_256_bin200_ep500_bs32_100k-1
 ```
 
 ### LSTM
+hxh
 ```bash
+# 生成queryload
+just wkld-gen-lstm census13 original lstm-1k 1000 100
+just wkld-gen-lstm census13 original lstm-2k 2000 200
 # census
-just train-lstm census13 original lstm-small 256_256_512_1024_1024 200 1000 32 0 123 MSELoss
+just train-lstm census13 original lstm-1k 256_512_1024_2048 200 1000 16 0 123 MSELoss
+just train-lstm census13 original lstm-1k 256_1024_4096 200 1000 16 0 123 MSELoss
+just train-lstm census13 original lstm-2k 256_512_1024_2048 200 2000 32 0 123 MSELoss
+just train-lstm census13 original lstm-2k 256_1024_4096 200 2000 32 0 123 MSELoss
 ```
 
 ### LW-XGB

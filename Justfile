@@ -232,13 +232,14 @@ wkld-gen-base data version name='base':
         'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
 
 # hxh
-# just wkld-gen-lstm census13 original lstm-small
-wkld-gen-lstm data version name='lstm':
+# just wkld-gen-lstm census13 original lstm-small 1000 100
+# just wkld-gen-lstm census13 original lstm-2k 2000 200
+wkld-gen-lstm data version name='lstm-small' train='1000' valid='100':
     poetry run python -m lecarb workload gen -d{{data}} -v{{version}} -w{{name}} --params \
         "{'attr': {'pred_number': 1.0}, \
         'center': {'distribution': 1.0}, \
         'width': {'uniform': 1.0}, \
-        'number': {'train': 1000, 'valid': 100, 'test': 100}, \
+        'number': {'train': {{train}}, 'valid': {{valid}}, 'test': {{valid}}}, \
         'queryNumPerSeq': 50}" --is-lstm
 
 wkld-gen-base-sth10 data version seed name:
@@ -287,7 +288,7 @@ train-lw-nn-update dataset='census13' version='original' workload='base' hid_uni
 
 # hxh 
 # TODO
-train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='256_256_512_1024_1024' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
+train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='256_512_1024_2048' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
         "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
 
