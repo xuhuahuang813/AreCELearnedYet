@@ -7,14 +7,13 @@ TODO
 【√】lstm层数量
 【√】args.hid_units
 【√】loss function
-
-测试函数
+【√】测试函数
 '''
 import time
 import logging
 from typing import Dict, Any, Tuple
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+# from tqdm import tqdm
 # import concurrent.futures
 import multiprocessing
 from functools import partial
@@ -43,7 +42,7 @@ class Args:
         self.bs = 32
         self.epochs = 100
         self.lr = 0.001 
-        self.hid_units = '256_256_512_1024_4096'
+        self.hid_units = '256_1024_4096'
         self.bins = 200 # 用于路径命名，没有实际作用
         self.train_num = 1000 # 默认验证和测试是训练的1/10
         self.lossfunc = 'MSELoss'
@@ -128,14 +127,29 @@ def Q_error_print(q_error_list):
 
     # 只打印非inf数值的百分比
     # q_error_list_noinf = [value.item() for value in q_error_list if value.item() != float('inf')]
-    q_error_list_noinf = [value.item() for value in q_error_list if value is not None and value.item() != float('inf')]
-    sorted_q_error_list = np.sort(q_error_list_noinf)
-    percentiles = [25, 50, 75, 90]
-    percentile_values = np.percentile(sorted_q_error_list, percentiles)
-    inf_count = len(q_error_list) - len(q_error_list_noinf)
-    for p, value in zip(percentiles, percentile_values):
-        L.info(f"{p}th percentile: {value}")
-    L.info(f"Number of 'inf' values: {inf_count}, Number of non 'inf' values: {len(q_error_list_noinf)}")
+    # 按理说 q_error_list中不会存在None和inf
+    # q_error_list_noinf = [value.item() for value in q_error_list if value is not None and value.item() != float('inf')]
+    # sorted_q_error_list = np.sort(q_error_list_noinf)
+    # percentiles = [25, 50, 75, 90]
+    # percentile_values = np.percentile(sorted_q_error_list, percentiles)
+    # inf_count = len(q_error_list) - len(q_error_list_noinf)
+    # for p, value in zip(percentiles, percentile_values):
+    #     L.info(f"{p}th percentile: {value}")
+    # L.info(f"Number of 'inf' values: {inf_count}, Number of non 'inf' values: {len(q_error_list_noinf)}")
+    
+    # 直接打印，对齐lw_nn
+    metrics = {
+        '\n25th': np.percentile(q_error_list, 25),
+        '50th': np.percentile(q_error_list, 50),
+        '75th': np.percentile(q_error_list, 75),
+        '90th': np.percentile(q_error_list, 90),
+        '95th': np.percentile(q_error_list, 95),
+        '99th': np.percentile(q_error_list, 99),
+        'max': np.max(q_error_list),
+        'mean': np.mean(q_error_list),
+    }
+    formatted_metrics = "\n".join([f"{key}: {value}" for key, value in metrics.items()])
+    L.info(formatted_metrics)
 
 '''
 解码模型输出
@@ -143,6 +157,7 @@ inputs.shape: torch.Size([32, 50, 11])
 preds.shape: torch.Size([32, 10000])
 collist [50]
 coll 'age/capital_loss'
+'''
 '''
 def decodePreds(inputs, preds, truecards, collist):
     # return [torch.tensor(2)]
@@ -189,6 +204,8 @@ def decodePreds(inputs, preds, truecards, collist):
         # L.info(f"estimate {estimate_card}; true {latest_tc}; q-error {q_error}")
         q_error_list.append(q_error)           
     return q_error_list
+'''
+
 
 '''
 多进程decodePreds
@@ -223,6 +240,9 @@ def process_iteration(args):
     
     return q_error
 
+'''
+多进程decodePreds 创建进程池
+'''
 def decodePreds_pool(inputs, preds, truecards, collist):
     latest_inputs = inputs[:, -1, :].to('cpu')
     latest_truecards = truecards[:, -1].to('cpu')
@@ -253,9 +273,9 @@ def Q_error(estimate_card, true_card):
     # 如果预测的是负数，则qerror直接返回表行数（最大值）
     if estimate_card < 0:
         # return torch.tensor(float('inf'))
-        estimate_card = torch.tensor([1])
+        estimate_card = torch.tensor([1.0])
     if estimate_card == 0:
-        estimate_card = torch.tensor([1])
+        estimate_card = torch.tensor([1.0])
     return max(estimate_card/true_card, true_card/estimate_card)
         
 
@@ -284,15 +304,15 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     global_table = load_table(dataset, version)
     
     # 加载训练、验证数据集，加载cols_alldomain用于解码
-    dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload, seed, params['bins'])
+    Dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload, seed, params['bins'])
     
     # 加载训练集和验证集
-    train_dataset = make_dataset(dataset['train'], int(args.train_num))
-    valid_dataset = make_dataset(dataset['valid'], int(args.train_num/10))
+    train_dataset = make_dataset(Dataset['train'], int(args.train_num))
+    valid_dataset = make_dataset(Dataset['valid'], int(args.train_num/10))
     L.info(f"Number of training samples: {len(train_dataset)}")
     L.info(f"Number of validation samples: {len(valid_dataset)}")
-    train_loader = DataLoader(train_dataset, batch_size=args.bs)
-    valid_loader = DataLoader(valid_dataset, batch_size=args.bs)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
+    valid_loader = DataLoader(valid_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
     
     # 设置模型
     model = TextSentimentModel(args.hid_units).to(DEVICE)
@@ -399,11 +419,11 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
 
             start_decodeT = time.time()
             # 单线程
-            # val_q_error_iter_list += decodePreds(inputs, preds, truecards, collist)
+            # val_q_error_iter_list = decodePreds(inputs, preds, truecards, collist)
             # 多线程
-            # val_q_error_iter_list += decodePreds_parallel(inputs, preds, truecards, collist)
+            # val_q_error_iter_list = decodePreds_parallel(inputs, preds, truecards, collist)
             # 多进程
-            val_q_error_iter_list += decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+            val_q_error_iter_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
             L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
             
             Q_error_print(val_q_error_iter_list)
@@ -447,8 +467,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     '''
     fig, ax1 = plt.subplots()
     # train_avgloss_epoch_list[0]是一个很大的数，导致折线图没有意义
-    if train_avgloss_epoch_list[0] > 0.1:
-        train_avgloss_epoch_list[0] = 0.1
+    # if train_avgloss_epoch_list[0] > 0.1:
+    #     train_avgloss_epoch_list[0] = 0.1
     ax1.plot(train_avgloss_epoch_list, label='Training Loss', color='blue')
     ax1.plot(valid_avgloss_epoch_list, label='Validation Loss', color='red')
     ax1.set_xlabel('Epoch')
@@ -466,3 +486,55 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     
     plt.title('Training Loss, Validation Loss, and Validation QError Over Epochs')
     plt.savefig(train_fig_file)
+
+
+'''
+模型测试
+'''
+def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], overwrite: bool):
+    global global_table
+    global global_cols_alldomain
+    
+    torch.set_num_threads(NUM_THREADS)
+    assert NUM_THREADS == torch.get_num_threads(), torch.get_num_threads()
+    L.info(f"Torch threads: {torch.get_num_threads()}")
+    
+    model_file = MODEL_ROOT / dataset / f"{params['model']}.pt"
+    L.info(f"Load model from {model_file} ...")
+    state = torch.load(model_file, map_location=DEVICE)
+    args = state['args']
+    
+    model = TextSentimentModel(args.hid_units).to(DEVICE)
+    model.load_state_dict(state['model_state_dict'])
+    model.eval()
+    
+    global_table = load_table(dataset, state['version'])
+    Dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload)
+    test_dataset = make_dataset(Dataset['test'], int(args.train_num/10))
+    L.info(f"Number of testing samples: {len(test_dataset)}")
+    test_loader = DataLoader(test_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
+
+    inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list = [], [], [], [] # 单个epoch内所有inputs
+    for _, data in enumerate(test_loader):
+        inputs, labels, truecards, collist = data
+        inputs = inputs.to(DEVICE).float()
+        labels = labels.to(DEVICE).float()
+        
+        with torch.no_grad():
+            preds = model(inputs)
+            inputs_iter_list.append(inputs)
+            preds_iter_list.append(preds)
+            truecards_iter_list.append(truecards)
+            collist_iter_list += collist
+    
+    
+    all_inputs = torch.cat(inputs_iter_list, dim=0)
+    all_preds = torch.cat(preds_iter_list, dim=0)
+    all_truecards = torch.cat(truecards_iter_list, dim=0)
+    all_collist = collist_iter_list
+
+    start_decodeT = time.time()
+    val_q_error_iter_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+    L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
+    
+    Q_error_print(val_q_error_iter_list)

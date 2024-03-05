@@ -206,7 +206,7 @@ def encode_queries(table:Table, queryset, labels):
     
 
 # load training dataset
-def load_lstm_dataset(table:Table, workload, seed, bins):
+def load_lstm_dataset(table:Table, workload, seed='123', bins=200):
     query_path = DATA_ROOT / table.dataset / "lstm"
     query_path.mkdir(exist_ok=True)
     

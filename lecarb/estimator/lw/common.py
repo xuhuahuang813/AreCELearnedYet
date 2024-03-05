@@ -1,6 +1,7 @@
 import numpy as np
 import pickle
 import logging
+from tqdm import tqdm
 
 from ..postgres import Postgres
 from ...workload.workload import load_queryset, load_labels, query_2_sqls, query_2_vector
@@ -46,7 +47,7 @@ def encode_queries(table, queryset, labels, pg_est):
     y = []
     gt = []
 
-    for query, label in zip(queryset, labels):
+    for query, label in tqdm(zip(queryset, labels), total=len(queryset), desc="Encoding Queries"):
         features = encode_query(table, query, pg_est)
         log2l = encode_label(label.cardinality)
         X.append(features)

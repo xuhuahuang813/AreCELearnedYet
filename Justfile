@@ -281,15 +281,14 @@ train-mscn dataset='census13' version='original' workload='base' num_samples='10
 
 train-lw-nn dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
-        "{'epochs': 500, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
+        "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 train-lw-nn-update dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123' eq='100':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
         "{'epochs': {{eq}}, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 # hxh 
-# TODO
-train-lstm dataset='census13' version='original' workload='lstm-small' hid_units='256_512_1024_2048' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
+train-lstm dataset='census13' version='original' workload='lstm-1w' hid_units='256_512_1024_2048' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
         "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
 
@@ -313,6 +312,11 @@ test-mscn model dataset='census13' version='original' workload='base' seed='123'
 test-lw-nn model dataset='census13' version='original' workload='base' use_cache='True' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
         "{'model': '{{model}}', 'use_cache': {{use_cache}}}"
+
+# hxh
+test-lstm model dataset='census13' version='original' workload='lstm-1w' seed='123':
+    poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
+        "{'model': '{{model}}'}"
 
 test-lw-tree model dataset='census13' version='original' workload='base' use_cache='True' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_tree --params \

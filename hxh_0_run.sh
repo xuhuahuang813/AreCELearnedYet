@@ -30,17 +30,17 @@
 
 datasets=('census13')
 versions=('original')
-workloads=('lstm-2k')
+workloads=('lstm-1w')
 
 hid_units=('256_1024_4096')
 bins=('200')
-train_nums=('1000')
-bss=('16' '32')
+train_nums=('10000')
+bss=('32')
 sizelimits=('0')
 seeds=('123')
 lossfuncs=('MSELoss')
 
-tips=('1' '2' '3')
+tips=('')
 
 for dataset in "${datasets[@]}"; do
   for version in "${versions[@]}"; do
