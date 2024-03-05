@@ -146,16 +146,22 @@ def train_lw_nn(seed, dataset, version, workload, params, sizelimit):
 
         valid_loss = valid_loss.mean()
         L.info(f'Valid loss is {valid_loss:.4f}')
-        valid_preds = np.maximum(np.round(decode_label(valid_preds)), 0.0)
-        L.info("Q-Error on validation set:")
-        _, metrics = evaluate(valid_preds, valid_gts)
+        
+        if (epoch + 1) == 1 or (epoch + 1) % 10 == 0:
+            # valid_preds = np.maximum(np.round(decode_label(valid_preds)), 0.0)
+            # hxh
+            valid_preds = np.round(decode_label(valid_preds))
+            L.info("Q-Error on validation set:")
+            _, metrics = evaluate(valid_preds, valid_gts)
 
         if valid_loss < best_valid_loss:
             L.info('best valid loss for now!')
             best_valid_loss = valid_loss
             state['model_state_dict'] = model.state_dict()
             state['optimizer_state_dict'] = optimizer.state_dict()
-            state['valid_error'] = {workload: metrics}
+            # state['valid_error'] = {workload: metrics}
+            # hxh
+            state['valid_error'] = {workload: valid_loss}
             state['train_time'] = (valid_stmp-start_stmp-valid_time) / 60
             state['current_epoch'] = epoch
             torch.save(state, model_file)
