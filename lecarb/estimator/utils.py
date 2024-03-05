@@ -27,16 +27,22 @@ def report_model(model, blacklist=None):
     return mb
 
 def qerror(est_card, card):
-    if est_card == 0 and card == 0:
-        return 1.0
-    if est_card == 0:
-        return card
-    if card == 0:
-        return est_card
-    if est_card > card:
-        return est_card / card
-    else:
-        return card / est_card
+    # if est_card == 0 and card == 0:
+    #     return 1.0
+    # if est_card == 0:
+    #     return card
+    # if card == 0:
+    #     return est_card
+    # if est_card > card:
+    #     return est_card / card
+    # else:
+    #     return card / est_card
+    
+    # hxh
+    if est_card <= 0:
+        est_card = 1
+    return max(est_card/card, card/est_card)
+    
 
 def rmserror(preds, labels, total_rows):
     return np.sqrt(np.mean(np.square(preds/total_rows-labels/total_rows)))
@@ -47,31 +53,36 @@ def evaluate(preds, labels, total_rows=-1):
         errors.append(qerror(float(preds[i]), float(labels[i])))
 
     metrics = {
-        'max': np.max(errors),
-        '99th': np.percentile(errors, 99),
-        '95th': np.percentile(errors, 95),
+        '\n25th': np.percentile(errors, 25),
+        '50th': np.percentile(errors, 50),
+        '75th': np.percentile(errors, 75),
         '90th': np.percentile(errors, 90),
-        'median': np.median(errors),
+        '95th': np.percentile(errors, 95),
+        '99th': np.percentile(errors, 99),
+        'max': np.max(errors),
         'mean': np.mean(errors),
-        'gmean': gmean(errors)
     }
 
     if total_rows > 0:
         metrics['rms'] = rmserror(preds, labels, total_rows)
-    L.info(f"{metrics}")
+    formatted_metrics = "\n".join([f"{key}: {value}" for key, value in metrics.items()])
+    L.info(formatted_metrics)
     return np.array(errors), metrics
 
 def evaluate_errors(errors):
     metrics = {
-        'max': np.max(errors),
-        '99th': np.percentile(errors, 99),
-        '95th': np.percentile(errors, 95),
+        '\n25th': np.percentile(errors, 25),
+        '50th': np.percentile(errors, 50),
+        '75th': np.percentile(errors, 75),
         '90th': np.percentile(errors, 90),
-        'median': np.median(errors),
+        '95th': np.percentile(errors, 95),
+        '99th': np.percentile(errors, 99),
+        'max': np.max(errors),
         'mean': np.mean(errors),
-        'gmean': gmean(errors)
     }
-    L.info(f"{metrics}")
+
+    formatted_metrics = "\n".join([f"{key}: {value}" for key, value in metrics.items()])
+    L.info(formatted_metrics)
     return metrics
 
 def report_errors(dataset, result_file):
@@ -185,15 +196,14 @@ def run_test(dataset: str, version: str, workload: str, estimator: Estimator, ov
         writer = csv.writer(f)
         writer.writerow(['id', 'error', 'predict', 'label', 'dur_ms'])
         for i, data in enumerate(zip(queries, labels)):
-            query, label = data
-            est_card, dur_ms = estimator.query(query)
-            est_card = np.round(r * est_card)
-            error = qerror(est_card, label.cardinality)
-            errors.append(error)
-            latencys.append(dur_ms)
-            writer.writerow([i, error, est_card, label.cardinality, dur_ms])
-            if (i+1) % 1000 == 0:
-                L.info(f"{i+1} queries finished")
+            if (i + 1) % 50 == 0:
+                query, label = data
+                est_card, dur_ms = estimator.query(query)
+                est_card = np.round(r * est_card)
+                error = qerror(est_card, label.cardinality)
+                errors.append(error)
+                latencys.append(dur_ms)
+                writer.writerow([i, error, est_card, label.cardinality, dur_ms])
     L.info(f"Test finished, {np.mean(latencys)} ms/query in average")
     evaluate_errors(errors)
 
