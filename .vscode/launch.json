@@ -54,28 +54,28 @@
             //         "--sizelimit", "0"
             // ],
             // 训练lw nn模型
-            // "args": [
-            //     "train",
-            //     "-s", "123",
-            //     "-d", "census13",
-            //     "-v", "original",
-            //     "-w", "lstm-1w",
-            //     "-e", "lw_nn",
-            //     "--params", "{\"epochs\": 10, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 10000, \"bs\": 32}",
-            //     "--sizelimit", "0"
-            // ],
-
-
-            // 测试lstm模型
-            "args" : [
-                "test",
+            "args": [
+                "train",
                 "-s", "123",
                 "-d", "census13",
                 "-v", "original",
                 "-w", "lstm-1w",
-                "-e", "lstm",
-                "--params", "{\"model\": 'original_lstm-1w-lstm_256_1024_4096_lossMSELoss_ep100_bs32_10k-123'}",
+                "-e", "lw_nn",
+                "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 10000, \"bs\": 32}",
+                "--sizelimit", "0"
             ],
+
+
+            // 测试lstm模型
+            // "args" : [
+            //     "test",
+            //     "-s", "123",
+            //     "-d", "census13",
+            //     "-v", "original",
+            //     "-w", "lstm-1w",
+            //     "-e", "lstm",
+            //     "--params", "{\"model\": 'original_lstm-1w-lstm_256_1024_4096_lossMSELoss_ep100_bs32_10k-123'}",
+            // ],
             // 测试lw nn模型
             // "args" : [
             //     "test",

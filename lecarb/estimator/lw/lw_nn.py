@@ -41,13 +41,23 @@ class LWQueryDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx], self.gt[idx]
 
-def make_dataset(dataset, num=-1):
-    X, y, gt = dataset
-    L.info(f"{X.shape}, {y.shape}, {gt.shape}")
-    if num <= 0:
-        return LWQueryDataset(X, y, gt)
-    else:
-        return LWQueryDataset(X[:num], y[:num], gt[:num])
+def make_dataset(dataset, num=-1, type="train"):
+    if type == "train":
+        X, y, gt = dataset
+        L.info(f"{X.shape}, {y.shape}, {gt.shape}")
+        if num <= 0:
+            return LWQueryDataset(X, y, gt)
+        else:
+            return LWQueryDataset(X[:num], y[:num], gt[:num])
+    elif type == "valid":
+        X, y, gt = dataset
+        X, y, gt = X[::50], y[::50], gt[::50]
+        
+        L.info(f"{X.shape}, {y.shape}, {gt.shape}")
+        if num <= 0:
+            return LWQueryDataset(X, y, gt)
+        else:
+            return LWQueryDataset(X[:num], y[:num], gt[:num])
 
 def train_lw_nn(seed, dataset, version, workload, params, sizelimit):
     # uniform thread number
@@ -77,8 +87,8 @@ def train_lw_nn(seed, dataset, version, workload, params, sizelimit):
 
     # load dataset
     dataset = load_lw_dataset(table, workload, seed, args.bins)
-    train_dataset = make_dataset(dataset['train'], num=args.train_num)
-    valid_dataset = make_dataset(dataset['valid'], num=args.train_num//10)
+    train_dataset = make_dataset(dataset['train'], num=args.train_num, type="train")
+    valid_dataset = make_dataset(dataset['valid'], num=args.train_num//10, type="valid")
 
     L.info(f"Number of training samples: {len(train_dataset)}")
     L.info(f"Number of validation samples: {len(valid_dataset)}")
