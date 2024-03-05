@@ -232,8 +232,9 @@ wkld-gen-base data version name='base':
         'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
 
 # hxh
-# just wkld-gen-lstm census13 original lstm-small 1000 100
+# just wkld-gen-lstm census13 original lstm-1k 1000 100
 # just wkld-gen-lstm census13 original lstm-2k 2000 200
+# just wkld-gen-lstm census13 original lstm-1w 10000 1000
 wkld-gen-lstm data version name='lstm-small' train='1000' valid='100':
     poetry run python -m lecarb workload gen -d{{data}} -v{{version}} -w{{name}} --params \
         "{'attr': {'pred_number': 1.0}, \
