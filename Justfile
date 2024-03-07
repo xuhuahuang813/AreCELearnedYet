@@ -283,7 +283,7 @@ train-mscn dataset='census13' version='original' workload='base' num_samples='10
 
 train-lw-nn dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
-        "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
+        "{'epochs': 200, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 train-lw-nn-update dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123' eq='100':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
@@ -292,7 +292,7 @@ train-lw-nn-update dataset='census13' version='original' workload='base' hid_uni
 # hxh 
 train-lstm dataset='census13' version='original' workload='lstm-1w' hid_units='256_512_1024_2048' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
-        "{'epochs': 200, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
+        "{'epochs': 120, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
 
 train-lw-tree dataset='census13' version='original' workload='base' trees='16' bins='200' train_num='1000' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_tree --params \

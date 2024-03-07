@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 # import concurrent.futures
 import multiprocessing
 from functools import partial
+import pickle
 
 import numpy as np
 import torch
@@ -244,9 +245,9 @@ def process_iteration(args):
     estimate_card = domain_list_sum * global_table.row_num
     q_error = Q_error(estimate_card, latest_tc)
     
-    if global_epoch >= 198 and torch.isinf(q_error):
+    if global_epoch >= 118 and torch.isinf(q_error):
         L.info(f"\n【inf】【coll】{coll}")
-    elif global_epoch >= 198 and q_error > 100.0:
+    elif global_epoch >= 118 and q_error > 3.0:
         L.info(f"\n【2】【coll】{coll}【Q】{q_error}")
     return q_error
 
@@ -295,7 +296,7 @@ def Q_error(estimate_card, true_card):
 def train_lstm(seed, dataset, version, workload, params, sizelimit):
     global global_table 
     global global_cols_alldomain 
-    global epoch_
+    global global_epoch
     
     L.info(f"training LSTM model with seed {seed}")
     
@@ -368,6 +369,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     valid_qerror_epoch_list = [] # 每个epoch所有qerror列表 (不包含inf和None)
     # 训练过程图片输出路径
     train_fig_file = model_path / f"{global_table.version}_{workload}-{model.name()}_loss{args.lossfunc}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}.png"
+    # 训练过程数据输出路径
+    train_log_file = model_path / f"{global_table.version}_{workload}-{model.name()}_loss{args.lossfunc}_ep{args.epochs}_bs{args.bs}_{args.train_num//1000}k-{seed}-log.pkl"
     
     # 初始化
     valid_time = 0
@@ -375,7 +378,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     
     start_stmp = time.time()
     for epoch in range(args.epochs):
-        epoch_ = epoch
+        global_epoch = epoch
         
         train_loss_iter_list = [] # 单个epoch内，每个iteration的loss
         model.train()
@@ -463,16 +466,16 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     L.info(f"Training finished! Time spent since start: {(time.time()-start_stmp)/60:.2f} mins")
     L.info(f"Model saved to {model_file}, best valid: {state['valid_error']}, best valid loss: {best_valid_loss}")
 
-    '''
-    画图 train和valid使用同一个y轴
-    '''
-    # plt.plot(train_avgloss_epoch_list, label='Training Loss')
-    # plt.plot(valid_avgloss_epoch_list, label='Validation Loss')
-    # plt.legend()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.title('Training and Validation Loss Over Epochs')
-    # plt.savefig(train_fig_file)
+    # 保存输出文件
+    data_dict = {
+        'train_avgloss_epoch_list': train_avgloss_epoch_list,
+        'valid_avgloss_epoch_list': valid_avgloss_epoch_list,
+        'valid_qerror_epoch_list': valid_qerror_epoch_list
+        }
+    with open(train_log_file, 'wb') as file:
+        pickle.dump(data_dict, file)
+    L.info(f"Log saved to {train_log_file}")
+        
     
     '''
     画图 
@@ -480,16 +483,12 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         valid_qerror_list 使用右轴, 箱型图
     '''
     fig, ax1 = plt.subplots()
-    # train_avgloss_epoch_list[0]是一个很大的数，导致折线图没有意义
-    # if train_avgloss_epoch_list[0] > 0.1:
-    #     train_avgloss_epoch_list[0] = 0.1
     ax1.plot(train_avgloss_epoch_list, label='Training Loss', color='blue')
     ax1.plot(valid_avgloss_epoch_list, label='Validation Loss', color='red')
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss', color='black')
     ax1.tick_params(axis='y', labelcolor='black')
     ax1.legend(loc='upper left') # 在左轴上添加图例
-    
     ax2 = ax1.twinx() # 在同一个图表上创建一个新的y轴，与原始的y轴（ax1）共享x轴。
     ax2.boxplot(valid_qerror_epoch_list, positions=[1]+[i * 10 for i in range(1, len(valid_qerror_epoch_list))], sym='+', vert=True, widths=6, showfliers=False)
     ax2.set_ylabel('Validation QError', color='green')
@@ -497,7 +496,6 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     ax2.set_ylim(10**-0.5, 10**2)  # 设置右轴的纵轴范围
     ax2.set_yscale('log')
     ax2.legend(loc='upper right')
-    
     plt.title('Training Loss, Validation Loss, and Validation QError Over Epochs')
     plt.savefig(train_fig_file)
 
@@ -518,6 +516,8 @@ def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], 
     L.info(f"Load model from {model_file} ...")
     state = torch.load(model_file, map_location=DEVICE)
     args = state['args']
+    
+    global_epoch = args.epochs
     
     model = TextSentimentModel(args.hid_units).to(DEVICE)
     model.load_state_dict(state['model_state_dict'])

@@ -30,7 +30,7 @@
 
 datasets=('census13')
 versions=('original')
-workloads=('lstm-1wAD_1')
+workloads=('lstm-1wAD_2')
 
 # hid_units=('256_1024_4096' '256_512_1024_2048' '256_512_1024_2048_4096_4096')
 # hid_units=('64_256_1024_4096' '64_128_256_512_1024_2048' '64_1024')

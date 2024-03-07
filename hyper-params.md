@@ -152,8 +152,11 @@ just train-lw-nn census13 original lstm-1wAllDomain 64_64_64 200 500000 128 0 12
 
 just train-lw-nn census13 original lstm-1kAD 64_64_64 200 1000 128 0 123
 
+just train-lw-nn census13 original lstm-1wAD_1 64_64_64 200 10000 128 0 123
+
+
 # census test
-just test-lw-nn original_lstm-1wAllDomain-lwnn_hid64_64_64_bin200_ep100_bs128_500k-123 census13 original lstm-1wAllDomain False 123
+just test-lw-nn original_lstm-1wAD_1-lwnn_hid64_64_64_bin200_ep100_bs128_10k-123 census13 original lstm-1wAD_1 False 123
 
 
 # forest
@@ -198,7 +201,7 @@ just test-lstm original_lstm-1w-lstm_256_1024_4096_lossMSELoss_ep100_bs32_10k-12
 just test-lstm original_lstm-1kAllDomain-lstm_64_1024_lossMSELoss_ep500_bs16_1k-123 census13 original lstm-1kAllDomain 123
 just test-lstm original_lstm-1wAllDomain-lstm_64_2048_lossMSELoss_ep200_bs16_10k-123 census13 original lstm-1wAllDomain 123
 
-just test-lstm original_lstm-1wAD-lstm_64_2048_lossMSELoss_ep200_bs8_10k-123 census13 original lstm-1wAD 123
+just test-lstm original_lstm-1wAD-lstm_64_2048_lossMSELoss_ep120_bs8_10k-123 census13 original lstm-1wAD 123
 
 ```
 
