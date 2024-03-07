@@ -145,18 +145,10 @@ Selected Models:
 # census
 just train-lw-nn census13 original base 64_64_64 200 100000 128 0 123
 just test-lw-nn original_base-lwnn_hid64_64_64_bin200_ep500_bs128_100k-123 census13 original base True 123
-# census train 使用lstm-1w
-just train-lw-nn census13 original lstm-1w 64_64_64 200 10000 128 0 123
-just train-lw-nn census13 original lstm-1kAllDomain 64_64_64 200 1000 128 0 123
-just train-lw-nn census13 original lstm-1wAllDomain 64_64_64 200 500000 128 0 123
-
-just train-lw-nn census13 original lstm-1kAD 64_64_64 200 1000 128 0 123
-
-just train-lw-nn census13 original lstm-1wAD_1 64_64_64 200 10000 128 0 123
-
-
+# census train 使用lstm-1wAD_2
+just train-lw-nn census13 original lstm-1wAD_2 64_64_64 200 10000 128 0 123
 # census test
-just test-lw-nn original_lstm-1wAD_1-lwnn_hid64_64_64_bin200_ep100_bs128_10k-123 census13 original lstm-1wAD_1 False 123
+just test-lw-nn original_lstm-1wAD_2-lwnn_hid64_64_64_bin200_ep120_bs32_10k-123 census13 original lstm-1wAD_2 False 123
 
 
 # forest
@@ -176,32 +168,12 @@ just test-lw-nn original_base-lwnn_hid2048_1024_512_256_bin200_ep500_bs32_100k-1
 hxh
 ```bash
 # 生成queryload
-just wkld-gen-lstm census13 original lstm-1k 1000 100
-just wkld-gen-lstm census13 original lstm-2k 2000 200
-just wkld-gen-lstm census13 original lstm-1kAD 1000 100
-just wkld-gen-lstm census13 original lstm-1wAD 10000 1000
+just wkld-gen-lstm census13 original lstm-1wAD_2 10000 1000
+
 # census 训练
-just train-lstm census13 original lstm-1k 256_512_1024_2048 200 1000 16 0 123 MSELoss
-just train-lstm census13 original lstm-1k 256_1024_4096 200 1000 16 0 123 MSELoss
-just train-lstm census13 original lstm-2k 256_512_1024_2048 200 2000 32 0 123 MSELoss
-just train-lstm census13 original lstm-2k 256_1024_4096 200 2000 32 0 123 MSELoss
-just train-lstm census13 original lstm-1w 256_1024_4096 200 10000 32 0 123 MSELoss
 
-just train-lstm census13 original lstm-1kAllDomain 256_1024_4096 200 1000 32 0 123 MSELoss
-just train-lstm census13 original lstm-1kAllDomain 256_512_1024_2048 200 1000 32 0 123 MSELoss
-just train-lstm census13 original lstm-1kAllDomain 256_512_1024_2048 200 1000 32 0 123 SmoothL1Loss
-
-just train-lstm census13 original lstm-1wAllDomain 64_2048 200 10000 32 0 123 MSELoss
-
-just train-lstm census13 original lstm-1kAD 64_2048 200 10000 16 0 123 MSELoss
-
-
-#census 测试
-just test-lstm original_lstm-1w-lstm_256_1024_4096_lossMSELoss_ep100_bs32_10k-123 census13 original lstm-1w 123
-just test-lstm original_lstm-1kAllDomain-lstm_64_1024_lossMSELoss_ep500_bs16_1k-123 census13 original lstm-1kAllDomain 123
-just test-lstm original_lstm-1wAllDomain-lstm_64_2048_lossMSELoss_ep200_bs16_10k-123 census13 original lstm-1wAllDomain 123
-
-just test-lstm original_lstm-1wAD-lstm_64_2048_lossMSELoss_ep120_bs8_10k-123 census13 original lstm-1wAD 123
+# census 测试
+just test-lstm original_lstm-1wAD_2-lstm_64_2048_lossMSELoss_ep120_bs8_10k-123 census13 original lstm-1wAD_2 123
 
 ```
 
