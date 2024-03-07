@@ -207,21 +207,33 @@ class QueryGenerator(object):
     
     # hxh 生成lstm数据集
     # 返回一组query。组中query个数等于单个序列长度。
-    def generate_lstm(self, queryNumPerSeq:int) -> List[Query]:
-        # groupSize=g domain (num_domain_left[g], num_domain_right[g]]
-        num_domain_left = [0, 0, 21, 10, 0, 0]
-        
-        # TODO 能否支持更多列
-        # num_domain_right = [0, 10000, 100, 21, 10, 10] # 包含"capital_gain"列，min=0, max=99999, vocab size=123 【这个列会导致query解码时间很长】
-        num_domain_right = [0, 100, 100, 21, 10, 10]
+    def generate_lstm(self, queryNumPerSeq:int, num:int) -> List[Query]:
+        # num_domain_left = [0, 0, 1, 1, 1, 1]
+        # # num_domain_right = [0, 10000, 100, 21, 10, 10] # 包含"capital_gain"列，min=0, max=99999, vocab size=123 【这个列会导致query解码时间很长】
+        # num_domain_right = [0, 100, 100, 21, 10, 10]
 
         queries = []
         
         # 选择列
-        num_pred = np.random.randint(1, 4) # 单个查询中包含列的个数
-        attr_domain = [c for c in list(self.table.data.columns) if self.table.columns[c].vocab_size > num_domain_left[num_pred] and self.table.columns[c].vocab_size <= num_domain_right[num_pred] and c != "capital_loss"]
-        attr_lst = np.random.choice(attr_domain, size=num_pred, replace=False)
+        # num_pred = np.random.randint(1, 4) # 单个查询中包含列的个数
+        # attr_domain = [c for c in list(self.table.data.columns) if self.table.columns[c].vocab_size > num_domain_left[num_pred] and self.table.columns[c].vocab_size <= num_domain_right[num_pred] and c != "capital_loss"]
+        # attr_lst = np.random.choice(attr_domain, size=num_pred, replace=False)
         
+        allAttrDomain = ['race', 'education', 'marital_status', 'workclass', 'occupation', 'education_num', 'relationship', 'hours_per_week', 'sex', 'age', 'native_country',
+                        'marital_status/race', 'education_num/race', 'workclass/marital_status', 'education/sex', 'education_num/marital_status', 'occupation/native_country', 
+                        'age/hours_per_week', 'race/sex', 'marital_status/sex', 'sex/native_country', 'workclass/sex', 'education_num/sex', 'age/education', 'education/hours_per_week', 
+                        'age/education_num', 'race/hours_per_week', 'marital_status/hours_per_week', 'occupation/race', 'workclass/hours_per_week', 'education_num/hours_per_week', 
+                        'age/native_country', 'workclass/education', 'education/education_num', 'age/occupation', 'occupation/sex', 'education/native_country', 'workclass/education_num', 
+                        'race/native_country', 'education/occupation', 'marital_status/native_country', 'age/race', 'workclass/native_country', 'age/marital_status', 'education_num/native_country', 
+                        'occupation/hours_per_week', 'age/workclass', 'marital_status/occupation', 'workclass/occupation', 'education/race', 'sex/hours_per_week', 'education_num/occupation', 
+                        'hours_per_week/native_country', 'age/sex', 'education/marital_status', 'workclass/race',
+                        'workclass/marital_status/sex', 'workclass/education/sex', 'workclass/education_num/sex', 'education_num/marital_status/sex', 'education_num/race/sex', 'workclass/race/sex', 
+                        'education/marital_status/race', 'education/education_num/race', 'workclass/education/education_num', 'education/education_num/marital_status', 'marital_status/race/sex', 
+                        'education/marital_status/sex', 'education/education_num/sex', 'workclass/marital_status/race', 'education/race/sex', 'workclass/education/race', 'workclass/education_num/race', 
+                        'education_num/marital_status/race', 'workclass/education/marital_status', 'workclass/education_num/marital_status',
+                        'workclass/marital_status/race/sex']
+        
+        attr_lst = allAttrDomain[num % len(allAttrDomain)].split("/")
         for _ in range(queryNumPerSeq):
             # L.info(f"Start generate queries of one seq. queryNumPerSeq is {queryNumPerSeq}")
             

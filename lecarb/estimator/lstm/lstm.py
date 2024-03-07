@@ -32,6 +32,9 @@ L = logging.getLogger(__name__)
 
 global_table = None # census表信息
 global_cols_alldomain = None # 联合域信息 ./common.py中的clos_alldomain
+global_cols_alldomain = None # 联合域信息 ./common.py中的clos_alldomain
+
+global_epoch = 0
 
 
 '''
@@ -128,15 +131,16 @@ def Q_error_print(q_error_list):
     # 只打印非inf数值的百分比
     # q_error_list_noinf = [value.item() for value in q_error_list if value.item() != float('inf')]
     # 按理说 q_error_list中不会存在None和inf
-    # q_error_list_noinf = [value.item() for value in q_error_list if value is not None and value.item() != float('inf')]
+    q_error_list_noinf = [value.item() for value in q_error_list if value is not None and value.item() != float('inf')]
     # sorted_q_error_list = np.sort(q_error_list_noinf)
     # percentiles = [25, 50, 75, 90]
     # percentile_values = np.percentile(sorted_q_error_list, percentiles)
-    # inf_count = len(q_error_list) - len(q_error_list_noinf)
     # for p, value in zip(percentiles, percentile_values):
     #     L.info(f"{p}th percentile: {value}")
-    # L.info(f"Number of 'inf' values: {inf_count}, Number of non 'inf' values: {len(q_error_list_noinf)}")
+    L.info(f"Number of 'inf' values: {len(q_error_list) - len(q_error_list_noinf)}, Number of non 'inf' values: {len(q_error_list_noinf)}")
     
+    
+    q_error_list = q_error_list_noinf
     # 直接打印，对齐lw_nn
     metrics = {
         '\n25th': np.percentile(q_error_list, 25),
@@ -211,6 +215,8 @@ def decodePreds(inputs, preds, truecards, collist):
 多进程decodePreds
 '''
 def process_iteration(args):
+    global global_epoch
+    
     q_error_i, (latest_in, latest_tc, coll, pred_cumulate) = args
     global global_table 
     global global_cols_alldomain 
@@ -238,6 +244,10 @@ def process_iteration(args):
     estimate_card = domain_list_sum * global_table.row_num
     q_error = Q_error(estimate_card, latest_tc)
     
+    if global_epoch >= 198 and torch.isinf(q_error):
+        L.info(f"\n【inf】【coll】{coll}")
+    elif global_epoch >= 198 and q_error > 100.0:
+        L.info(f"\n【2】【coll】{coll}【Q】{q_error}")
     return q_error
 
 '''
@@ -272,8 +282,8 @@ def Q_error(estimate_card, true_card):
 
     # 如果预测的是负数，则qerror直接返回表行数（最大值）
     if estimate_card < 0:
-        # return torch.tensor(float('inf'))
-        estimate_card = torch.tensor([1.0])
+        return torch.tensor(float('inf'))
+        # estimate_card = torch.tensor([1.0])
     if estimate_card == 0:
         estimate_card = torch.tensor([1.0])
     return max(estimate_card/true_card, true_card/estimate_card)
@@ -285,6 +295,7 @@ def Q_error(estimate_card, true_card):
 def train_lstm(seed, dataset, version, workload, params, sizelimit):
     global global_table 
     global global_cols_alldomain 
+    global epoch_
     
     L.info(f"training LSTM model with seed {seed}")
     
@@ -311,8 +322,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     valid_dataset = make_dataset(Dataset['valid'], int(args.train_num/10))
     L.info(f"Number of training samples: {len(train_dataset)}")
     L.info(f"Number of validation samples: {len(valid_dataset)}")
-    train_loader = DataLoader(train_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
-    valid_loader = DataLoader(valid_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
+    train_loader = DataLoader(train_dataset, batch_size=args.bs)
+    valid_loader = DataLoader(valid_dataset, batch_size=args.bs)
     
     # 设置模型
     model = TextSentimentModel(args.hid_units).to(DEVICE)
@@ -335,7 +346,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     if(args.lossfunc == 'MSELoss'):
         criterion = nn.MSELoss() # MSELoss比L1Loss好
     elif(args.lossfunc == 'SmoothL1Loss'):
-        criterion = nn.SmoothL1Loss() # 和MSELoss差不多
+        criterion = nn.SmoothL1Loss() # 和MSELoss差不多。在AllDomain上，SmoothL1Loss比MSELoss差很多
     elif(args.lossfunc == 'L1Loss'):
         criterion = nn.L1Loss() 
     elif(args.lossfunc == 'KLDivLoss'): # 不可以
@@ -346,6 +357,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     # optimizer = torch.optim.Adam(model.parameters()) # Adam默认lr是1e-3
     optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001)
+    # optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001, weight_decay=0.001) # weight_decay导致训练效果极差
     # scheduler = StepLR(optimizer, step_size=50, gamma=0.1) # 每step_size, lr = lr * gamma
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True) # 自适应调整lr
     
@@ -363,6 +375,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     
     start_stmp = time.time()
     for epoch in range(args.epochs):
+        epoch_ = epoch
+        
         train_loss_iter_list = [] # 单个epoch内，每个iteration的loss
         model.train()
         for _, data in enumerate(train_loader):
@@ -494,6 +508,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
 def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], overwrite: bool):
     global global_table
     global global_cols_alldomain
+    global global_epoch
     
     torch.set_num_threads(NUM_THREADS)
     assert NUM_THREADS == torch.get_num_threads(), torch.get_num_threads()

@@ -1,0 +1,14 @@
+['race', 'education', 'marital_status', 'workclass', 'occupation', 'education_num', 'relationship', 'hours_per_week', 'sex', 'age', 'native_country',
+'marital_status/race', 'education_num/race', 'workclass/marital_status', 'education/sex', 'education_num/marital_status', 'occupation/native_country', 
+'age/hours_per_week', 'race/sex', 'marital_status/sex', 'sex/native_country', 'workclass/sex', 'education_num/sex', 'age/education', 'education/hours_per_week', 
+'age/education_num', 'race/hours_per_week', 'marital_status/hours_per_week', 'occupation/race', 'workclass/hours_per_week', 'education_num/hours_per_week', 
+'age/native_country', 'workclass/education', 'education/education_num', 'age/occupation', 'occupation/sex', 'education/native_country', 'workclass/education_num', 
+'race/native_country', 'education/occupation', 'marital_status/native_country', 'age/race', 'workclass/native_country', 'age/marital_status', 'education_num/native_country', 
+'occupation/hours_per_week', 'age/workclass', 'marital_status/occupation', 'workclass/occupation', 'education/race', 'sex/hours_per_week', 'education_num/occupation', 
+'hours_per_week/native_country', 'age/sex', 'education/marital_status', 'workclass/race',
+'workclass/marital_status/sex', 'workclass/education/sex', 'workclass/education_num/sex', 'education_num/marital_status/sex', 'education_num/race/sex', 'workclass/race/sex', 
+'education/marital_status/race', 'education/education_num/race', 'workclass/education/education_num', 'education/education_num/marital_status', 'marital_status/race/sex', 
+'education/marital_status/sex', 'education/education_num/sex', 'workclass/marital_status/race', 'education/race/sex', 'workclass/education/race', 'workclass/education_num/race', 
+'education_num/marital_status/race', 'workclass/education/marital_status', 'workclass/education_num/marital_status',
+'workclass/marital_status/race/sex']
+

@@ -44,6 +44,7 @@ class LWQueryDataset(Dataset):
 def make_dataset(dataset, num=-1, type="train"):
     if type == "train":
         X, y, gt = dataset
+        X, y, gt = X[::50], y[::50], gt[::50]
         L.info(f"{X.shape}, {y.shape}, {gt.shape}")
         if num <= 0:
             return LWQueryDataset(X, y, gt)
@@ -258,5 +259,3 @@ def test_lw_nn(dataset: str, version: str, workload: str, params: Dict[str, Any]
         L.info(f"Load and build lw(nn) estimator: {estimator}")
 
         run_test(dataset, version, workload, estimator, overwrite)
-
-

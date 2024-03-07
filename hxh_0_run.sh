@@ -30,16 +30,21 @@
 
 datasets=('census13')
 versions=('original')
-workloads=('lstm-1w')
+workloads=('lstm-1wAD_1')
 
-hid_units=('256_1024_4096')
+# hid_units=('256_1024_4096' '256_512_1024_2048' '256_512_1024_2048_4096_4096')
+# hid_units=('64_256_1024_4096' '64_128_256_512_1024_2048' '64_1024')
+# hid_units=('64_512' '64_1024' '64_2048' '256_1024' '256_2048' '256_1024_4096')
+hid_units=('64_2048')
+
 bins=('200')
 train_nums=('10000')
-bss=('32')
+bss=('8')
 sizelimits=('0')
 seeds=('123')
 lossfuncs=('MSELoss')
 
+# tips=('1' '2' '3')
 tips=('')
 
 for dataset in "${datasets[@]}"; do
