@@ -27,15 +27,13 @@
             //     "-wbase",
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 0.9, 'domain_ood': 0.1}, 'width': {'uniform': 0.5, 'exponential': 0.5}, 'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
             // ],
-
-
             // 生成lstm queryload，生成文件路径为data/census13/workload/*.pkl和*-label.pkl。文件若存在则覆盖重写。
             // "args": [
             //     "workload",
             //     "gen",
             //     "-dcensus13",
             //     "-voriginal",
-            //     "-wlstm-small",
+            //     "-wlstm-1wAD",
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 1.0}, 'width': {'uniform': 1.0}, 'number': {'train': 1000, 'valid': 100, 'test': 100}, 'queryNumPerSeq': 50}",
             //     "--is-lstm"
             // ],
@@ -54,28 +52,28 @@
             //         "--sizelimit", "0"
             // ],
             // 训练lw nn模型
-            "args": [
-                "train",
-                "-s", "123",
-                "-d", "census13",
-                "-v", "original",
-                "-w", "lstm-1w",
-                "-e", "lw_nn",
-                "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 10000, \"bs\": 32}",
-                "--sizelimit", "0"
-            ],
-
-
-            // 测试lstm模型
-            // "args" : [
-            //     "test",
+            // "args": [
+            //     "train",
             //     "-s", "123",
             //     "-d", "census13",
             //     "-v", "original",
             //     "-w", "lstm-1w",
-            //     "-e", "lstm",
-            //     "--params", "{\"model\": 'original_lstm-1w-lstm_256_1024_4096_lossMSELoss_ep100_bs32_10k-123'}",
+            //     "-e", "lw_nn",
+            //     "--params", "{\"epochs\": 500, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 10000, \"bs\": 32}",
+            //     "--sizelimit", "0"
             // ],
+
+
+            // 测试lstm模型
+            "args" : [
+                "test",
+                "-s", "123",
+                "-d", "census13",
+                "-v", "original",
+                "-w", "lstm-1k0310",
+                "-e", "lstm",
+                "--params", "{\"model\": 'original_lstm-1k0310-lstm_64_512_lossMSELoss_ep200_bs8_1k-123'}",
+            ],
             // 测试lw nn模型
             // "args" : [
             //     "test",

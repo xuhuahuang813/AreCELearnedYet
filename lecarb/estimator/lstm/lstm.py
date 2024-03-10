@@ -10,6 +10,7 @@ TODO
 【√】测试函数
 '''
 import time
+import csv
 import logging
 from typing import Dict, Any, Tuple
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 
 from ...dataset.dataset import load_table
 from .common import load_lstm_dataset
-from ...constants import DEVICE, MODEL_ROOT, NUM_THREADS
+from ...constants import DEVICE, MODEL_ROOT, NUM_THREADS, RESULT_ROOT
 
 L = logging.getLogger(__name__)
 
@@ -245,11 +246,11 @@ def process_iteration(args):
     estimate_card = domain_list_sum * global_table.row_num
     q_error = Q_error(estimate_card, latest_tc)
     
-    if global_epoch >= 118 and torch.isinf(q_error):
+    if global_epoch >= 198 and torch.isinf(q_error):
         L.info(f"\n【inf】【coll】{coll}")
-    elif global_epoch >= 118 and q_error > 3.0:
+    elif global_epoch >= 198 and q_error > 3.0:
         L.info(f"\n【2】【coll】{coll}【Q】{q_error}")
-    return q_error
+    return q_error, estimate_card
 
 '''
 多进程decodePreds 创建进程池
@@ -260,14 +261,16 @@ def decodePreds_pool(inputs, preds, truecards, collist):
     preds = preds.to('cpu') 
     
     q_error_list = []
+    estimate_list = []
     total_iterations = len(latest_inputs)
     
     with multiprocessing.Pool() as pool:
         func_partial = partial(process_iteration)
         args = list(enumerate(zip(latest_inputs, latest_truecards, collist, preds)))
-        q_error_list = pool.map(func_partial, args)
+        results = pool.map(func_partial, args)
     
-    return q_error_list
+    q_error_list, estimate_list = zip(*results)
+    return list(q_error_list), list(estimate_list)
 
 
 '''
@@ -297,6 +300,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     global global_table 
     global global_cols_alldomain 
     global global_epoch
+    global global_epoch_all
     
     L.info(f"training LSTM model with seed {seed}")
     
@@ -440,7 +444,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
             # 多线程
             # val_q_error_iter_list = decodePreds_parallel(inputs, preds, truecards, collist)
             # 多进程
-            val_q_error_iter_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+            val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
             L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
             
             Q_error_print(val_q_error_iter_list)
@@ -517,6 +521,10 @@ def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], 
     state = torch.load(model_file, map_location=DEVICE)
     args = state['args']
     
+    result_path = RESULT_ROOT / f"{dataset}"
+    result_path.mkdir(parents=True, exist_ok=True)
+    result_file = result_path / f"{version}-{workload}-lstm.csv"
+    
     global_epoch = args.epochs
     
     model = TextSentimentModel(args.hid_units).to(DEVICE)
@@ -549,7 +557,20 @@ def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], 
     all_collist = collist_iter_list
 
     start_decodeT = time.time()
-    val_q_error_iter_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+    val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
     L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
     
     Q_error_print(val_q_error_iter_list)
+    
+    all_truecards_ = all_truecards[:, -1]
+    with open(result_file, 'w') as f:
+        writer = csv.writer(f)
+        header = ["id", "True Card", "Estimate Card", "Validation Error", "Column List"]
+        writer.writerow(header)
+        
+        for _ in range(len(all_truecards_)):
+            row = [_, all_truecards_[_].item(), estimate_list[_].item(), val_q_error_iter_list[_].item(), all_collist[_]]
+            writer.writerow(row)
+    
+    L.info(f"Test finished, result in {result_file}")
+        

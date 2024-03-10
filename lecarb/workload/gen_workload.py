@@ -78,8 +78,8 @@ def generate_workload(
             L.info(f"Start generate workload with {num} queries for {group}...")
             queries = []
             for i in range(num):
-                queries += qgen.generate_lstm(queryNumPerSeq, i)
-                if (i+1) % 1000 == 0:
+                queries += qgen.generate_lstm(queryNumPerSeq, group)
+                if (i+1) % 10 == 0:
                     L.info(f"{i+1} queries generated")
             queryset[group] = queries
         

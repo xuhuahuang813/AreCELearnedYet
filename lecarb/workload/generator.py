@@ -13,6 +13,8 @@ from .workload import Query, new_query
 
 L = logging.getLogger(__name__)
 
+# QuerySet = {'train':[], 'valid':[], 'test':[]}
+
 """====== Attribute Selection Functions ======"""
 
 class AttributeSelFunc(Protocol):
@@ -207,7 +209,9 @@ class QueryGenerator(object):
     
     # hxh 生成lstm数据集
     # 返回一组query。组中query个数等于单个序列长度。
-    def generate_lstm(self, queryNumPerSeq:int, num:int) -> List[Query]:
+    def generate_lstm(self, queryNumPerSeq:int, group:str) -> List[Query]:
+        # global QuerySet
+        
         # num_domain_left = [0, 0, 1, 1, 1, 1]
         # # num_domain_right = [0, 10000, 100, 21, 10, 10] # 包含"capital_gain"列，min=0, max=99999, vocab size=123 【这个列会导致query解码时间很长】
         # num_domain_right = [0, 100, 100, 21, 10, 10]
@@ -224,17 +228,20 @@ class QueryGenerator(object):
                         'age/hours_per_week', 'race/sex', 'marital_status/sex', 'sex/native_country', 'workclass/sex', 'education_num/sex', 'education/hours_per_week', 
                         'age/education_num', 'race/hours_per_week', 'marital_status/hours_per_week', 'occupation/race', 'workclass/hours_per_week', 'education_num/hours_per_week', 
                         'age/native_country', 'workclass/education', 'education/education_num', 'age/occupation', 'occupation/sex', 'education/native_country', 'workclass/education_num', 
-                        'race/native_country', 'education/occupation', 'marital_status/native_country', 'age/race', 'workclass/native_country', 'age/marital_status', 'education_num/native_country', 
+                        'race/native_country', 'education/occupation', 'marital_status/native_country', 'age/race', 'workclass/native_country', 'education_num/native_country', 
                         'occupation/hours_per_week', 'age/workclass', 'marital_status/occupation', 'workclass/occupation', 'education/race', 'sex/hours_per_week', 'education_num/occupation', 
                         'hours_per_week/native_country', 'age/sex', 'education/marital_status', 'workclass/race',
                         'workclass/marital_status/sex', 'workclass/education/sex', 'workclass/education_num/sex', 'education_num/marital_status/sex', 'workclass/race/sex', 
                         'education/marital_status/race', 'education/education_num/race', 'workclass/education/education_num', 'education/education_num/marital_status', 'marital_status/race/sex', 
                         'education/marital_status/sex', 'education/education_num/sex', 'workclass/marital_status/race', 'education/race/sex', 'workclass/education/race', 'workclass/education_num/race', 
-                        'education_num/marital_status/race', 'workclass/education/marital_status',
+                        'workclass/education/marital_status',
                         'workclass/marital_status/race/sex']
         
-        attr_lst = allAttrDomain[num % len(allAttrDomain)].split("/")
-        for _ in range(queryNumPerSeq):
+        attr_domain_prob_norm = [0.004355113742238902, 0.007502581586102339, 0.005265602335970787, 0.005945655236286631, 0.007327941360382217, 0.007502581586102339, 0.0048484730146689, 0.012351054600771239, 0.0018756453965255847, 0.01164673262018224, 0.010114075350639688, 0.009620716078209688, 0.01185769532834124, 0.011211257572257417, 0.009378226982627923, 0.012768183922073125, 0.017442016711021906, 0.023997787220953474, 0.0062307591387644875, 0.007141247732496371, 0.01198972074716527, 0.007821300632812214, 0.009378226982627923, 0.019853636186873577, 0.019149314206284573, 0.01670616834301014, 0.017616656936742026, 0.011683055102621118, 0.01829670983705787, 0.019853636186873577, 0.021760807970821923, 0.01344823682238897, 0.015005163172204678, 0.018974673980564457, 0.009203586756907802, 0.017616656936742026, 0.01344823682238897, 0.014469189092878589, 0.014830522946484556, 0.015379677686610471, 0.016001846362421142, 0.016059730586926318, 0.017616656936742026, 0.019678995961153457, 0.01759238785646887, 0.012593543696353003, 0.01327359659666885, 0.01185769532834124, 0.014226699997296822, 0.014830522946484556, 0.022465129951410923, 0.01352237801670782, 0.012768183922073125, 0.010300768978525533, 0.013086902968783003, 0.015323882218914554, 0.015323882218914554, 0.014643829318598709, 0.012176414375051117, 0.017123297664312028, 0.01936027691444358, 0.02095081840849131, 0.020270765508175463, 0.011496361474735275, 0.014643829318598709, 0.01688080856873026, 0.01556637131449632, 0.013733340724866825, 0.01780335056462787, 0.01780335056462787, 0.01871383915835976, 0.017442016711021906]
+        
+        attr_lst = np.random.choice(allAttrDomain, size=1, replace=False, p=attr_domain_prob_norm)[0].split("/")
+        # attr_lst = allAttrDomain[num % len(allAttrDomain)].split("/")
+        while len(queries) < queryNumPerSeq: 
             # L.info(f"Start generate queries of one seq. queryNumPerSeq is {queryNumPerSeq}")
             
             center_func = np.random.choice(list(self.center.keys()), p=list(self.center.values()))
@@ -243,6 +250,34 @@ class QueryGenerator(object):
 
             width_func = np.random.choice(list(self.width.keys()), p=list(self.width.values()))
             #  L.info(f'start generate widths {width_func.__name__}')
-            queries.append(width_func(self.table, attr_lst, center_lst, self.width_params))
-
+            
+            query_ = width_func(self.table, attr_lst, center_lst, self.width_params)
+            queries.append(query_)
+            
+            # try_num = 1
+            # while len(queries) == queryNumPerSeq -1:
+            #     if group == 'train':
+            #         if (query_ not in QuerySet['train'] or attr_lst == ['sex'] or attr_lst == ['race'] or try_num >= 30000):
+            #             queries.append(query_)
+            #             QuerySet['train'].append(query_)
+            #             break
+            #         else:
+            #             try_num += 1
+            #             if(try_num % 10000 == 0):  
+            #                 L.info(f"Query has already generated. {attr_lst} \n {query_}")
+            #             center_lst = center_func(self.table, attr_lst, self.center_params)
+            #             query_ = width_func(self.table, attr_lst, center_lst, self.width_params)
+            #     elif group == 'valid' or group == 'test':
+            #         if ((query_ not in QuerySet['train'] and  query_ not in QuerySet[group]) or attr_lst == ['sex'] or attr_lst == ['race'] or try_num >= 100000):
+            #             queries.append(query_)
+            #             QuerySet[group].append(query_)
+            #             break
+            #         else:
+            #             try_num += 1
+            #             if(try_num % 10000 == 0):  
+            #                 L.info(f"Query has already generated. {attr_lst} \n {query_}")
+            #             center_lst = center_func(self.table, attr_lst, self.center_params)
+            #             query_ = width_func(self.table, attr_lst, center_lst, self.width_params)
+            #     else:
+            #         L.error("Wrong in generate queries")
         return queries

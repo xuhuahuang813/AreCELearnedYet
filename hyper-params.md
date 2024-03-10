@@ -146,9 +146,15 @@ Selected Models:
 just train-lw-nn census13 original base 64_64_64 200 100000 128 0 123
 just test-lw-nn original_base-lwnn_hid64_64_64_bin200_ep500_bs128_100k-123 census13 original base True 123
 # census train 使用lstm-1wAD_2
-just train-lw-nn census13 original lstm-1wAD_2 64_64_64 200 10000 128 0 123
+just train-lw-nn census13 original lstm-1k0311 64_64_64 200 1000 128 0 123
+
+nohup just train-lw-nn census13 original lstm-1k0311 64_64_64 200 1000 128 0 123 > hxh_log/lwnn_1k.log &
+nohup just train-lw-nn census13 original lstm-5k0311 64_64_64 200 5000 128 0 123 > hxh_log/lwnn_5k.log &
+nohup just train-lw-nn census13 original lstm-1w0311 64_64_64 200 10000 128 0 123 > hxh_log/lwnn_1w.log &
+
+just train-lw-nn census13 original lstm-5k0310 64_64_64 200 5000 128 0 123
 # census test
-just test-lw-nn original_lstm-1wAD_2-lwnn_hid64_64_64_bin200_ep120_bs32_10k-123 census13 original lstm-1wAD_2 False 123
+just test-lw-nn original_lstm-1k-lwnn_hid64_64_64_bin200_ep120_bs128_1k-123 census13 original lstm-1k False 123
 
 
 # forest
@@ -168,12 +174,13 @@ just test-lw-nn original_base-lwnn_hid2048_1024_512_256_bin200_ep500_bs32_100k-1
 hxh
 ```bash
 # 生成queryload
-just wkld-gen-lstm census13 original lstm-1wAD_2 10000 1000
+just wkld-gen-lstm census13 original lstm-1k0310 1000 100
+just wkld-gen-lstm census13 original lstm-1w0310 10000 1000
 
 # census 训练
 
 # census 测试
-just test-lstm original_lstm-1wAD_2-lstm_64_2048_lossMSELoss_ep120_bs8_10k-123 census13 original lstm-1wAD_2 123
+just test-lstm original_lstm-1k0310-lstm_64_512_lossMSELoss_ep200_bs8_1k-123 census13 original lstm-1k0310 123
 
 ```
 

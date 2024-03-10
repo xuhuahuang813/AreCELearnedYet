@@ -292,7 +292,7 @@ train-lw-nn-update dataset='census13' version='original' workload='base' hid_uni
 # hxh 
 train-lstm dataset='census13' version='original' workload='lstm-1w' hid_units='256_512_1024_2048' bins='200' train_num='1000' bs='32' sizelimit='0' seed='123' lossfunc='MSELoss':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elstm --params \
-        "{'epochs': 120, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
+        "{'epochs': 200, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}, 'lossfunc':'{{lossfunc}}'}" --sizelimit {{sizelimit}}
 
 train-lw-tree dataset='census13' version='original' workload='base' trees='16' bins='200' train_num='1000' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_tree --params \
@@ -359,6 +359,8 @@ test-mysql dataset='census13' version='original' workload='base' bucket='1024' t
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -emysql --params \
         "{'version': '{{train_version}}', 'bucket': {{bucket}}}" --overwrite
 
+# hxh
+# just test-sample census13 original lstm-1k 0.015 original 123
 test-sample dataset='census13' version='original' workload='base' ratio='0.015' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -esample --params \
         "{'version': '{{train_version}}', 'ratio': {{ratio}}}"

@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # nohup ./hxh_0_run.sh &
+# nohup just wkld-gen-lstm census13 original lstm-1k0311 1000 100 &
+# nohup just wkld-gen-lstm census13 original lstm-5k0311 5000 500 > nohup5k.out &
+# nohup just wkld-gen-lstm census13 original lstm-1w0311 10000 1000 > nohup1w.out &
+
 # poetry run python -m lecarb train -s123 -dcensus13 -voriginal -wlstm-small -elstm --params "{'epochs': 100, 'bins': 200, 'hid_units': '256_512_1024_2048_4096_4096', 'train_num': 1000, 'bs': 32}" --sizelimit 0
 
 # rm -rf output/model/census13/*
@@ -30,12 +34,12 @@
 
 datasets=('census13')
 versions=('original')
-workloads=('lstm-1wAD_2')
+workloads=('lstm-1w0311')
 
 # hid_units=('256_1024_4096' '256_512_1024_2048' '256_512_1024_2048_4096_4096')
 # hid_units=('64_256_1024_4096' '64_128_256_512_1024_2048' '64_1024')
-# hid_units=('64_512' '64_1024' '64_2048' '256_1024' '256_2048' '256_1024_4096')
-hid_units=('64_2048')
+hid_units=('64_2048' '256_1024' '256_2048' '256_1024_4096')
+# hid_units=('64_2048')
 
 bins=('200')
 train_nums=('10000')
