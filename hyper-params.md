@@ -200,6 +200,9 @@ Selected Models:
 # census
 just train-lw-tree census13 original base 64 200 100000 0 123
 just test-lw-tree original_base-lwxgb_tr64_bin200_100k-123 census13 original base True 123
+# census train
+just train-lw-tree census13 original lstm-5k0311 64 200 5000 0 123
+
 
 # forest
 just train-lw-tree forest10 original base 512 200 100000 0 123

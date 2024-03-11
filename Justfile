@@ -351,6 +351,8 @@ test-quicksel dataset='census13' version='original' workload='base' train_num='1
                         -Xmx256g -Xms32g edu.illinois.quicksel.experiments.Test quicksel {{dataset}} {{version}} {{workload}} {{train_num}} $row_num {{var_num}}
     cd ..
 
+# hxh
+# just test-postgres census13 original lstm-1k0311 100 original 123
 test-postgres dataset='census13' version='original' workload='base' stat_target='10000' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -epostgres --params \
         "{'version': '{{train_version}}', 'stat_target': {{stat_target}}}" --overwrite
@@ -360,7 +362,7 @@ test-mysql dataset='census13' version='original' workload='base' bucket='1024' t
         "{'version': '{{train_version}}', 'bucket': {{bucket}}}" --overwrite
 
 # hxh
-# just test-sample census13 original lstm-1k 0.015 original 123
+# just test-sample census13 original lstm-1w0311 0.015 original 123
 test-sample dataset='census13' version='original' workload='base' ratio='0.015' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -esample --params \
         "{'version': '{{train_version}}', 'ratio': {{ratio}}}"
@@ -369,6 +371,8 @@ test-mhist dataset='census13' version='original' workload='base' num_bins='30000
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -emhist --params \
         "{'version': '{{train_version}}', 'num_bins': {{num_bins}}}"
 
+# hxh
+# just test-bayesnet census13 original lstm-1w0311 200 100 50 original 123
 test-bayesnet dataset='census13' version='original' workload='base' samples='200' discretize='100' parallelism='50' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -ebayesnet --params \
         "{'version': '{{train_version}}', 'samples': {{samples}}, 'discretize': {{discretize}}, 'parallelism': {{parallelism}}}"
