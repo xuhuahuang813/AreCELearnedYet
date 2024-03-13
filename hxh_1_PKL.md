@@ -25,3 +25,7 @@ train len is 100000; valid len is 10000; test len is 10000
  'columns']
 
  ![Alt text](hxh_image/image_3.png)
+
+ 0311 是uniform的
+ 0312 是train和 test valid完全不相交的
+ 0312_1 是 if _ % 8 != 0:

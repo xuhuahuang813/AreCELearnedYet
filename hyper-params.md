@@ -152,6 +152,10 @@ nohup just train-lw-nn census13 original lstm-1k0311 64_64_64 200 1000 128 0 123
 nohup just train-lw-nn census13 original lstm-5k0311 64_64_64 200 5000 128 0 123 > hxh_log/lwnn_5k.log &
 nohup just train-lw-nn census13 original lstm-1w0311 64_64_64 200 10000 128 0 123 > hxh_log/lwnn_1w.log &
 
+nohup just train-lw-nn census13 original lstm-1k0312_1 64_64_64 200 1000 128 0 123 > hxh_log/lwnn_1k.log &
+nohup just train-lw-nn census13 original lstm-5k0312_1 64_64_64 200 5000 128 0 123 > hxh_log/lwnn_5k.log &
+nohup just train-lw-nn census13 original lstm-1w0312_1 64_64_64 200 10000 128 0 123 > hxh_log/lwnn_1w.log &
+
 just train-lw-nn census13 original lstm-5k0310 64_64_64 200 5000 128 0 123
 # census test
 just test-lw-nn original_lstm-1k-lwnn_hid64_64_64_bin200_ep120_bs128_1k-123 census13 original lstm-1k False 123

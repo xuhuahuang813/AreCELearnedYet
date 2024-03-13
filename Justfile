@@ -232,7 +232,7 @@ wkld-gen-base data version name='base':
         'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
 
 # hxh
-# just wkld-gen-lstm census13 original lstm-1k 1000 100
+# just wkld-gen-lstm census13 original lstm-1k0312 1000 100
 # just wkld-gen-lstm census13 original lstm-2k 2000 200
 # just wkld-gen-lstm census13 original lstm-1w 10000 1000
 # just wkld-gen-lstm census13 original lstm-1kAllDomain 1000 100
