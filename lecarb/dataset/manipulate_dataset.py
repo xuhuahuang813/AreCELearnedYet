@@ -64,6 +64,7 @@ def get_skew_data(dataset: str = 'census', version: str = 'original', sample_rat
 
 
 def append_data(dataset: str, version_target: str, version_from: str, interval=0.2):
+    L.info(f"from {version_from}, target {version_target}")
     df_target = pd.read_pickle(DATA_ROOT / dataset / f"{version_target}.pkl")
     df_from = pd.read_pickle(DATA_ROOT / dataset / f"{version_from}.pkl")
 

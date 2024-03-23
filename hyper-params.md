@@ -45,6 +45,9 @@ Selected Models:
 just train-naru census13 original 4 16 8 embed embed True 0 0 100 base 123
 just test-naru original-resmade_hid16,16,16,16_emb8_ep100_embedInembedOut_warm0-123 2000 census13 original base 123
 
+just train-naru census13 original 4 16 8 embed embed True 0 0 100 lstm-1k0311 123
+just test-naru original-resmade_hid16,16,16,16_emb8_ep100_embedInembedOut_warm0-123 2000 census13 original lstm-1k0311 123
+
 # forest
 just train-naru forest10 original 4 64 8 embed embed True 4000 0 100 base 123
 just test-naru original-resmade_hid64,64,64,64_emb8_ep100_embedInembedOut_warm4000-123 2000 forest10 original base 123

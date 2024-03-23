@@ -141,12 +141,26 @@ def encode_query_y(query:Query, table: Table):
         # 笛卡尔积
         cartesian_product = list(product(*unique_values))
         result_df = pd.DataFrame(cartesian_product, columns=col_list)
-        # 增加一列index_alldomain，内容为新的索引值
-        result_df['index_alldomain'] = pd.Series(range(len(result_df))) / len(result_df)
-        # 乘以10000后四舍五入取整
-        result_df['index_alldomain'] = round(result_df['index_alldomain'] * 10000)
+        
         # 排序新的DataFrame
         result_df.sort_values(by=col_list, inplace=True)
+        
+        # 增加一列index_alldomain，内容为新的索引值
+        result_df['index_alldomain'] = range(len(result_df))
+        # 【检查】
+        is_increasing = all(result_df['index_alldomain'].iloc[i] - result_df['index_alldomain'].iloc[i+1] == -1 for i in range(len(result_df)-1))
+        if not is_increasing:
+            L.error("每一行未单增1")
+        
+        result_df['index_alldomain'] = result_df['index_alldomain'] / len(result_df)
+        # 【检查】
+        is_increasing = all(result_df['index_alldomain'].iloc[i] < result_df['index_alldomain'].iloc[i+1] for i in range(len(result_df)-1))
+        if not is_increasing:
+            L.error("每一行未单增")
+
+        # 乘以10000后四舍五入取整
+        result_df['index_alldomain'] = round(result_df['index_alldomain'] * 10000)
+        
         result_df.reset_index(drop=True, inplace=True)
         # 合并原始的grouped_counts中的count和cumulative_probability列，只保留存在的行
         grouped_counts = pd.merge(result_df, grouped_counts, how='inner', on=col_list)
@@ -192,6 +206,7 @@ def encode_queries(table:Table, queryset, labels):
     y = [] #10000维向量
     card = [] # card
     colList = [] # 存储每50个query是对应的哪些列
+    tableSize = [] # 存储每50个query对应的表大小
     
     for i, (query, label) in enumerate(zip(queryset, labels), start=1):
         if i % 1000 == 0:
@@ -202,7 +217,8 @@ def encode_queries(table:Table, queryset, labels):
             col_l, y_vector = encode_query_y(query, table)
             y.append(y_vector)
             colList.append(col_l)
-    return X, y, card, colList
+            tableSize.append(table.row_num)
+    return X, y, card, colList, tableSize
     
 
 # load training dataset

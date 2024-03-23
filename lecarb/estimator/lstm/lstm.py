@@ -57,17 +57,18 @@ class Args:
 
 
 class TextDataset(Dataset):
-    def __init__(self, texts, labels, truecards, colList):
+    def __init__(self, texts, labels, truecards, colList, tableSize):
         self.texts = texts
         self.labels = labels
         self.truecards = truecards
         self.colList = colList
+        self.tableSize = tableSize
 
     def __len__(self):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        return self.texts[idx], self.labels[idx], self.truecards[idx], self.colList[idx]
+        return self.texts[idx], self.labels[idx], self.truecards[idx], self.colList[idx], self.tableSize[idx]
 
 
 '''
@@ -105,16 +106,16 @@ class TextSentimentModel(nn.Module):
     
     
 def make_dataset(dataset, num=-1):
-    X, y, gt, colList = dataset
+    X, y, gt, colList, tableSize = dataset
     # 将list转为tenser
     X = torch.tensor(X).view(num, 50, 11)
     y = torch.tensor(y)
     gt = torch.tensor(gt).view(num, 50)
     L.info(f"{X.shape}, {y.shape}, {gt.shape}")
     if num <= 0:
-        return TextDataset(X, y, gt, colList)
+        return TextDataset(X, y, gt, colList, tableSize)
     else:
-        return TextDataset(X[:num], y[:num], gt[:num], colList[:num])
+        return TextDataset(X[:num], y[:num], gt[:num], colList[:num], tableSize[:num])
 
 
 '''
@@ -219,7 +220,7 @@ def decodePreds(inputs, preds, truecards, collist):
 def process_iteration(args):
     global global_epoch
     
-    q_error_i, (latest_in, latest_tc, coll, pred_cumulate) = args
+    q_error_i, (latest_in, latest_tc, coll, pred_cumulate, tablesize) = args
     global global_table 
     global global_cols_alldomain 
     
@@ -243,19 +244,22 @@ def process_iteration(args):
             
     pred = [pred_cumulate[i] - pred_cumulate[i-1] if i > 0 else pred_cumulate[i] for i in range(len(pred_cumulate))]
     domain_list_sum = np.sum([pred[int(i)] for i in domain_list])
-    estimate_card = domain_list_sum * global_table.row_num
+    # 【静态负载时使用】
+    # estimate_card = domain_list_sum * global_table.row_num
+    # 【动态负载时使用】
+    estimate_card = domain_list_sum * tablesize
     q_error = Q_error(estimate_card, latest_tc)
     
-    if global_epoch >= 198 and torch.isinf(q_error):
-        L.info(f"\n【inf】【coll】{coll}")
-    elif global_epoch >= 198 and q_error > 3.0:
-        L.info(f"\n【2】【coll】{coll}【Q】{q_error}")
+    # if global_epoch >= 198 and torch.isinf(q_error):
+    #     L.info(f"\n【inf】【coll】{coll}")
+    # elif global_epoch >= 198 and q_error > 3.0:
+    #     L.info(f"\n【2】【coll】{coll}【Q】{q_error}")
     return q_error, estimate_card
 
 '''
 多进程decodePreds 创建进程池
 '''
-def decodePreds_pool(inputs, preds, truecards, collist):
+def decodePreds_pool(inputs, preds, truecards, collist, tablesize):
     latest_inputs = inputs[:, -1, :].to('cpu')
     latest_truecards = truecards[:, -1].to('cpu')
     preds = preds.to('cpu') 
@@ -264,9 +268,9 @@ def decodePreds_pool(inputs, preds, truecards, collist):
     estimate_list = []
     total_iterations = len(latest_inputs)
     
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(processes=16) as pool:
         func_partial = partial(process_iteration)
-        args = list(enumerate(zip(latest_inputs, latest_truecards, collist, preds)))
+        args = list(enumerate(zip(latest_inputs, latest_truecards, collist, preds, tablesize)))
         results = pool.map(func_partial, args)
     
     q_error_list, estimate_list = zip(*results)
@@ -318,6 +322,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     
     # 加载数据集，将csv文件转为Table类
     global_table = load_table(dataset, version)
+    # global_table = load_table(dataset, "original")
     
     # 加载训练、验证数据集，加载cols_alldomain用于解码
     Dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload, seed, params['bins'])
@@ -387,7 +392,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         train_loss_iter_list = [] # 单个epoch内，每个iteration的loss
         model.train()
         for _, data in enumerate(train_loader):
-            inputs, labels, truecards, collist = data
+            inputs, labels, truecards, collist, tablesize = data
             inputs = inputs.to(DEVICE).float()
             labels = labels.to(DEVICE).float()
             
@@ -412,9 +417,9 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
         val_loss_iter_list = [] # 单个epoch内，每个iteration的loss
         val_q_error_iter_list = [] # 单个epoch内，每个iteration的中每个query的q_error
 
-        inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list = [], [], [], [] # 单个epoch内所有inputs
+        inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list, table_size_iter_list = [], [], [], [], [] # 单个epoch内所有inputs
         for _, data in enumerate(valid_loader):
-            inputs, labels, truecards, collist = data
+            inputs, labels, truecards, collist, tablesize = data
             inputs = inputs.to(DEVICE).float()
             labels = labels.to(DEVICE).float()
             
@@ -428,6 +433,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
                     preds_iter_list.append(preds)
                     truecards_iter_list.append(truecards)
                     collist_iter_list += collist
+                    table_size_iter_list += tablesize
                     
         avg_val_loss = sum(val_loss_iter_list) / len(val_loss_iter_list)
         valid_avgloss_epoch_list.append(avg_val_loss)
@@ -437,6 +443,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
             all_preds = torch.cat(preds_iter_list, dim=0)
             all_truecards = torch.cat(truecards_iter_list, dim=0)
             all_collist = collist_iter_list
+            all_tablesize = table_size_iter_list
 
             start_decodeT = time.time()
             # 单线程
@@ -444,7 +451,7 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
             # 多线程
             # val_q_error_iter_list = decodePreds_parallel(inputs, preds, truecards, collist)
             # 多进程
-            val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+            val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist, all_tablesize)
             L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
             
             Q_error_print(val_q_error_iter_list)
@@ -532,14 +539,16 @@ def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], 
     model.eval()
     
     global_table = load_table(dataset, state['version'])
+    # global_table = load_table(dataset, "original")
+    
     Dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload)
     test_dataset = make_dataset(Dataset['test'], int(args.train_num/10))
     L.info(f"Number of testing samples: {len(test_dataset)}")
     test_loader = DataLoader(test_dataset, batch_size=args.bs, num_workers=NUM_THREADS)
 
-    inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list = [], [], [], [] # 单个epoch内所有inputs
+    inputs_iter_list, preds_iter_list, truecards_iter_list, collist_iter_list, table_size_iter_list = [], [], [], [], [] # 单个epoch内所有inputs
     for _, data in enumerate(test_loader):
-        inputs, labels, truecards, collist = data
+        inputs, labels, truecards, collist, tablesize = data
         inputs = inputs.to(DEVICE).float()
         labels = labels.to(DEVICE).float()
         
@@ -549,15 +558,17 @@ def test_lstm(dataset: str, version: str, workload: str, params:Dict[str, Any], 
             preds_iter_list.append(preds)
             truecards_iter_list.append(truecards)
             collist_iter_list += collist
+            table_size_iter_list += tablesize
     
     
     all_inputs = torch.cat(inputs_iter_list, dim=0)
     all_preds = torch.cat(preds_iter_list, dim=0)
     all_truecards = torch.cat(truecards_iter_list, dim=0)
     all_collist = collist_iter_list
+    all_tablesize = table_size_iter_list
 
     start_decodeT = time.time()
-    val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist)
+    val_q_error_iter_list, estimate_list = decodePreds_pool(all_inputs, all_preds, all_truecards, all_collist, all_tablesize)
     L.info(f"Decode Time: {(time.time()-start_decodeT)}s")
     
     Q_error_print(val_q_error_iter_list)
