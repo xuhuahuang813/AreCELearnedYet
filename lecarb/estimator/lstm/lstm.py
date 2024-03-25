@@ -321,8 +321,8 @@ def train_lstm(seed, dataset, version, workload, params, sizelimit):
     args = Args(**params)
     
     # 加载数据集，将csv文件转为Table类
-    global_table = load_table(dataset, version)
-    # global_table = load_table(dataset, "original")
+    # global_table = load_table(dataset, version)
+    global_table = load_table(dataset, "original")
     
     # 加载训练、验证数据集，加载cols_alldomain用于解码
     Dataset, global_cols_alldomain = load_lstm_dataset(global_table, workload, seed, params['bins'])

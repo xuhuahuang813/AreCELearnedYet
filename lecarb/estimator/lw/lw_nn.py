@@ -45,7 +45,7 @@ def make_dataset(dataset, num=-1, type="train"):
     if type == "train":
         X, y, gt = dataset
         X, y, gt = X[::50], y[::50], gt[::50]
-        L.info(f"{X.shape}, {y.shape}, {gt.shape}")
+        # L.info(f"{X.shape}, {y.shape}, {gt.shape}")
         if num <= 0:
             return LWQueryDataset(X, y, gt)
         else:
@@ -54,7 +54,7 @@ def make_dataset(dataset, num=-1, type="train"):
         X, y, gt = dataset
         X, y, gt = X[::50], y[::50], gt[::50]
         
-        L.info(f"{X.shape}, {y.shape}, {gt.shape}")
+        # L.info(f"{X.shape}, {y.shape}, {gt.shape}")
         if num <= 0:
             return LWQueryDataset(X, y, gt)
         else:

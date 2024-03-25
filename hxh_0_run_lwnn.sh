@@ -2,7 +2,7 @@
 
 datasets=('census13')
 versions=('original')
-workloads=('lstm-1wAD_2')
+workloads=('merge1w')
 
 hid_units=('64_64_64')
 

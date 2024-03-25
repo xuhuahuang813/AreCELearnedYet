@@ -237,6 +237,9 @@ wkld-gen-base data version name='base':
 # just wkld-gen-lstm census13 original lstm-1w 10000 1000
 # just wkld-gen-lstm census13 original lstm-1kAllDomain 1000 100
 # just wkld-gen-lstm census13 original lstm-1wAllDomain 10000 1000
+
+# nohup just wkld-gen-lstm census13 original+original_ind_0.2 lstm-2k-IND0.2 2000 200 > 0.2.out &
+# nohup just wkld-gen-lstm census13 original lstm-1w 10000 1000 > 1w.out &
 wkld-gen-lstm data version name='lstm-small' train='1000' valid='100':
     poetry run python -m lecarb workload gen -d{{data}} -v{{version}} -w{{name}} --params \
         "{'attr': {'pred_number': 1.0}, \
@@ -283,7 +286,7 @@ train-mscn dataset='census13' version='original' workload='base' num_samples='10
 
 train-lw-nn dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
-        "{'epochs': 120, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
+        "{'epochs': 100, 'bins': {{bins}}, 'hid_units': '{{hid_units}}', 'train_num': {{train_num}}, 'bs': {{bs}}}" --sizelimit {{sizelimit}}
 
 train-lw-nn-update dataset='census13' version='original' workload='base' hid_units='128_64_32' bins='200' train_num='10000' bs='32' sizelimit='0' seed='123' eq='100':
     poetry run python -m lecarb train -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -elw_nn --params \
@@ -393,6 +396,10 @@ test-kde dataset='census13' version='original' workload='base' ratio='0.015' tra
 
 ############ Update data ############
 ### Data update/wkld-update
+# nohup just append-data-ind 123 census13 original 0.2 > 0.2.out &
+# nohup just append-data-ind 123 census13 original 0.3 > 0.3.out &
+# nohup just append-data-ind 123 census13 original 0.4 > 0.4.out &
+
 append-data-ind seed='123' dataset='census13' version='original' ap_size='0.2':
     poetry run python -m lecarb dataset update -d{{dataset}} -s{{seed}} -v{{version}} --params \
         "{'type':'ind', 'batch_ratio':{{ap_size}}}"

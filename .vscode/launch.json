@@ -25,7 +25,7 @@
             //     "-d", "census13",
             //     "-s", "123",
             //     "-v", "original",
-            //     "--params", "{\"type\":'ind', \"batch_ratio\":0.1}"
+            //     "--params", "{\"type\":'ind', \"batch_ratio\":0.5}"
             // ],
 
 
@@ -44,7 +44,7 @@
             //     "gen",
             //     "-dcensus13",
             //     "-voriginal",
-            //     "-wlstm-1wAD",
+            //     "-wlstm-1k0323",
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 1.0}, 'width': {'uniform': 1.0}, 'number': {'train': 1000, 'valid': 100, 'test': 100}, 'queryNumPerSeq': 50}",
             //     "--is-lstm"
             // ],
@@ -53,8 +53,8 @@
             //     "workload",
             //     "gen",
             //     "-dcensus13",
-            //     "-voriginal+original_ind_0.1",
-            //     "-wlstm-1k-IND0.1",
+            //     "-voriginal+original_ind_0.5",
+            //     "-wlstm-1k-IND0.5",
             //     "--params={'attr': {'pred_number': 1.0}, 'center': {'distribution': 1.0}, 'width': {'uniform': 1.0}, 'number': {'train': 1000, 'valid': 100, 'test': 100}, 'queryNumPerSeq': 50}",
             //     "--is-lstm"
             // ],
@@ -67,7 +67,7 @@
             //         "-s", "123",
             //         "-d", "census13",
             //         "-v", "original",
-            //         "-w", "lstm-1k0311",
+            //         "-w", "lstm-1k0323",
             //         "-e", "lstm",
             //         "--params", "{\"epochs\": 100, \"bins\": 200, \"hid_units\": '64_1024', \"train_num\": 1000, \"bs\": 32, \"lossfunc\": 'MSELoss'}",
             //         "--sizelimit", "0"
@@ -84,16 +84,16 @@
             //         "--sizelimit", "0"
             // ],
             // 【混合数据】训练lstm 【还没有完成】
-            // "args": [
-            //         "train",
-            //         "-s", "123",
-            //         "-d", "census13",
-            //         "-v", "original",
-            //         "-w", "merge",
-            //         "-e", "lstm",
-            //         "--params", "{\"epochs\": 200, \"bins\": 200, \"hid_units\": '64_1024', \"train_num\": 1000, \"bs\": 32, \"lossfunc\": 'MSELoss'}",
-            //         "--sizelimit", "0"
-            // ],
+            "args": [
+                    "train",
+                    "-s", "123",
+                    "-d", "census13",
+                    "-v", "original",
+                    "-w", "merge1w",
+                    "-e", "lstm",
+                    "--params", "{\"epochs\": 200, \"bins\": 200, \"hid_units\": '64_2048', \"train_num\": 10000, \"bs\": 8, \"lossfunc\": 'MSELoss'}",
+                    "--sizelimit", "0"
+            ],
             // 训练lw nn模型
             // "args": [
             //     "train",
@@ -110,8 +110,19 @@
             //     "train",
             //     "-s", "123",
             //     "-d", "census13",
-            //     "-v", "original+original_ind_0.1",
-            //     "-w", "lstm-1k-IND0.1",
+            //     "-v", "original+original_ind_0.5",
+            //     "-w", "lstm-1k-IND0.5",
+            //     "-e", "lw_nn",
+            //     "--params", "{\"epochs\": 100, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 1000, \"bs\": 32}",
+            //     "--sizelimit", "0"
+            // ],
+            // 【混合数据】训练lw nn模型
+            // "args": [
+            //     "train",
+            //     "-s", "123",
+            //     "-d", "census13",
+            //     "-v", "original",
+            //     "-w", "merge5",
             //     "-e", "lw_nn",
             //     "--params", "{\"epochs\": 100, \"bins\": 200, \"hid_units\": '64_64_64', \"train_num\": 1000, \"bs\": 32}",
             //     "--sizelimit", "0"
