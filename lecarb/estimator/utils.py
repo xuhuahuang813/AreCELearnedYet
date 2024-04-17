@@ -150,9 +150,9 @@ def run_test(dataset: str, version: str, workload: str, estimator: Estimator, ov
     result_path = RESULT_ROOT / f"{dataset}"
     result_path.mkdir(parents=True, exist_ok=True)
     result_file = result_path / f"{version}-{workload}-{estimator}.csv"
-    if not overwrite and result_file.is_file():
-        L.info(f"Already have the result {result_file}, do not run again!")
-        exit(0)
+    # if not overwrite and result_file.is_file():
+    #     L.info(f"Already have the result {result_file}, do not run again!")
+    #     exit(0)
 
     r = 1.0
     if version != estimator.table.version:
@@ -203,6 +203,7 @@ def run_test(dataset: str, version: str, workload: str, estimator: Estimator, ov
                 error = qerror(est_card, label.cardinality)
                 errors.append(error)
                 latencys.append(dur_ms)
+                L.info(f"\n【true】{label.cardinality}【esti】{est_card}【Q】{error}")
                 writer.writerow([i, error, est_card, label.cardinality, dur_ms])
     L.info(f"Test finished, {np.mean(latencys)} ms/query in average")
     evaluate_errors(errors)

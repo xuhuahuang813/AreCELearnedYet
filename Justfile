@@ -355,7 +355,9 @@ test-quicksel dataset='census13' version='original' workload='base' train_num='1
     cd ..
 
 # hxh
-# just test-postgres census13 original lstm-1k0311 100 original 123
+# just test-postgres census13 original lstm-1w0311 10000 original 123
+# just test-postgres census13 original lstm-1w0311 10000 original 123
+
 test-postgres dataset='census13' version='original' workload='base' stat_target='10000' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -epostgres --params \
         "{'version': '{{train_version}}', 'stat_target': {{stat_target}}}" --overwrite
@@ -365,7 +367,7 @@ test-mysql dataset='census13' version='original' workload='base' bucket='1024' t
         "{'version': '{{train_version}}', 'bucket': {{bucket}}}" --overwrite
 
 # hxh
-# just test-sample census13 original lstm-1w0311 0.015 original 123
+# just test-sample census13 original lstm-1w0311 0.01 original 123
 test-sample dataset='census13' version='original' workload='base' ratio='0.015' train_version='original' seed='123':
     poetry run python -m lecarb test -s{{seed}} -d{{dataset}} -v{{version}} -w{{workload}} -esample --params \
         "{'version': '{{train_version}}', 'ratio': {{ratio}}}"

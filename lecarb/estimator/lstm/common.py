@@ -250,6 +250,7 @@ def load_lstm_dataset(table:Table, workload, seed='123', bins=200):
     # 编码
     lw_dataset = {}
     for group in queryset.keys(): # train, valid, test
+    # for group in ["test"]: # train, valid, test
         L.info(f"Start encode group: {group} with {len(labels[group])} queries...")
         lw_dataset[group] = encode_queries(table, queryset[group], labels[group])
         

@@ -96,8 +96,14 @@ Selected Models:
 ```bash
 # census
 just train-mscn census13 original base 500 8 100 256 100000 0 123
-just test-mscn original_base-mscn_hid8_sample500_ep100_bs256_100k-123 census13 original base 123
-
+just test-mscn original_lstm-5k0311-lwnn_hid64_64_64_bin200_ep120_bs128_5k-123 census13 original merge1w 123
+# 【训练】
+# 【静态】
+just train-mscn census13 original lstm-1w0311 500 8 20 256 10000 0 123
+just test-mscn original_lstm-1w-mscn_hid8_sample500_ep100_bs256_10k-123 census13 original lstm-1w 123
+just test-mscn original_lstm-1w-mscn_hid8_sample500_ep100_bs256_10k-123 census13 original merge1w 123
+# 【动态】
+just train-mscn census13 original merge1w 500 8 100 256 10000 0 123
 # forest
 just train-mscn forest10 original base 3000 32 100 256 100000 0 123
 just test-mscn original_base-mscn_hid32_sample3000_ep100_bs256_100k-123 forest10 original base 123
@@ -147,7 +153,7 @@ Selected Models:
 ```bash
 # census
 just train-lw-nn census13 original base 64_64_64 200 100000 128 0 123
-just test-lw-nn original_base-lwnn_hid64_64_64_bin200_ep500_bs128_100k-123 census13 original base True 123
+just test-lw-nn original_lstm-1w0311-lwnn_hid64_64_64_bin200_ep120_bs128_10k-123 census13 original lstm-1w0311 True 123
 # census train 使用lstm-1wAD_2
 just train-lw-nn census13 original lstm-1k0311 64_64_64 200 1000 128 0 123
 
@@ -191,7 +197,7 @@ just wkld-gen-lstm census13 original lstm-1w0310 10000 1000
 # census 训练
 
 # census 测试
-just test-lstm original_lstm-1k0310-lstm_64_512_lossMSELoss_ep200_bs8_1k-123 census13 original lstm-1k0310 123
+just test-lstm original_lstm-1w0311-lstm_256_1024_lossMSELoss_ep200_bs8_10k-123 census13 original lstm-1w0311 123
 
 ```
 

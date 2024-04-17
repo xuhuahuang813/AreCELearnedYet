@@ -1,8 +1,8 @@
 #!/bin/bash
 
 datasets=('census13')
-versions=('original+original_ind_0.1' 'original+original_ind_0.2' 'original+original_ind_0.3' 'original+original_ind_0.4' 'original+original_ind_0.5')  # 添加了第二个版本
-workloads=('lstm-2k-IND0.1' 'lstm-2k-IND0.2' 'lstm-2k-IND0.3' 'lstm-2k-IND0.4' 'lstm-2k-IND0.5')  # 添加了第二个工作负载
+versions=('original+original_ind_0.1' 'original+original_ind_0.2' 'original+original_ind_0.3' 'original+original_ind_0.4' 'original+original_ind_0.5') 
+workloads=('lstm-2k-IND0.1' 'lstm-2k-IND0.2' 'lstm-2k-IND0.3' 'lstm-2k-IND0.4' 'lstm-2k-IND0.5')  
 
 hid_units=('64_2048')
 bins=('200')
