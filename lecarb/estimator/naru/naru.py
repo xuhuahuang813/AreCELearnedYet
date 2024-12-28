@@ -52,6 +52,11 @@ class Args:
 
         # overwrite parameters from user
         self.__dict__.update(kwargs)
+        
+    def print_params(self):
+        print("Configuration Parameters:")
+        for key, value in self.__dict__.items():
+            print(f"{key}: {value}")
 
 class NaruTableDataset(Dataset):
     def __init__(self, table):
@@ -291,6 +296,7 @@ def train_naru(seed, dataset, version, workload, params, sizelimit):
     # convert parameter dict to original naru code format
     L.info(f"params: {params}")
     args = Args(**params)
+    args.print_params()
 
     fixed_ordering = None
     if args.order is not None:

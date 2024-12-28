@@ -20,6 +20,7 @@ csv2pkl path:
     df = df.astype({k: CategoricalDtype(ordered=True) for k, d in df.dtypes.items() if d == "O"})
     df.to_pickle(path.with_suffix(".pkl"))
 
+set dotenv-load
 pkl2table dataset version:
     poetry run python -m lecarb dataset table -d{{dataset}} -v{{version}} --overwrite
 
@@ -229,7 +230,7 @@ wkld-gen-base data version name='base':
         "{'attr': {'pred_number': 1.0}, \
         'center': {'distribution': 0.9, 'vocab_ood': 0.1}, \
         'width': {'uniform': 0.5, 'exponential': 0.5}, \
-        'number': {'train': 100000, 'valid': 10000, 'test': 10000}}"
+        'number': {'train': 1000, 'valid': 100, 'test': 100}}"
 
 wkld-gen-base-sth10 data version seed name:
     poetry run python -m lecarb workload gen -s{{seed}} -d{{data}} -v{{version}} -w{{name}} --params \
